@@ -28,15 +28,16 @@ import tensorflow as tf
 featureDict = {
     "truth": {
         'names':[
-            'B','C','UDS','G','PU','LLP',
+            'B','C','UDS','G','PU','LLP_MU','LLP_Q',
         ],
         'weights':[
             'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
             'jetorigin_isC||jetorigin_isCC||jetorigin_isGCC',
             'jetorigin_isUD||jetorigin_isS',
             'jetorigin_isG',
-            'jetorigin_isPU*(global_pt<50.)',
-            'jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_QQ||jetorigin_isLLP_Q',
+            '(jetorigin_isPU)*(global_pt<50.)',
+            'jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
+            '(jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD)*(global_pt<50.)',
         ],
         "branches":[
             'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
@@ -44,7 +45,8 @@ featureDict = {
             'jetorigin_isUD||jetorigin_isS',
             'jetorigin_isG',
             'jetorigin_isPU',
-            'jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_QQ||jetorigin_isLLP_Q'
+            'jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
+            'jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD'
         ],
     },
     
@@ -83,6 +85,15 @@ featureDict = {
             'global_eventShapeC',
             'global_eventShapeD',
             
+            "global_beta",
+            "global_dR2Mean",
+            "global_frac01",
+            "global_frac02",
+            "global_frac03",
+            "global_frac04",
+            "global_jetR",
+            "global_jetRchg", 
+            
             'csv_trackSumJetEtRatio', 
             'csv_trackSumJetDeltaR', 
             'csv_vertexCategory', 
@@ -94,9 +105,8 @@ featureDict = {
             'csv_jetNTracksEtaRel'
         ],
         "preprocessing":{
-            'global_pt':lambda x: tf.log(tf.nn.relu(x)+1e-3),
+            'global_pt':lambda x: tf.log(tf.clip_by_value(x,0.,100.)+1e-3),
             'global_mass':lambda x: tf.log(tf.nn.relu(x)+1e-3),
-            
             'csv_trackSip2dValAboveCharm':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5), 
             'csv_trackSip2dSigAboveCharm':lambda x: tf.log(tf.abs(x)+1e-3),
             'csv_trackSip3dValAboveCharm':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5), 
@@ -106,35 +116,43 @@ featureDict = {
 
     "cpf": {
         "branches": [
-            'cpf_trackEtaRel',
-            'cpf_trackPtRel',
-            'cpf_trackPPar',
-            'cpf_trackDeltaR',
-            'cpf_trackPParRatio',
-            'cpf_trackSip2dVal',
-            'cpf_trackSip2dSig',
-            'cpf_trackSip3dVal',
-            'cpf_trackSip3dSig',
-            'cpf_trackJetDistVal',
-            'cpf_ptrel', 
-            'cpf_deta', 
-            'cpf_dphi', 
-            'cpf_drminsv',
-            'cpf_vertex_association',
-            'cpf_fromPV',
-            'cpf_track_chi2',
-            'cpf_track_ndof',
-            'cpf_relmassdrop',
-            'cpf_track_quality',
+            "cpf_trackEtaRel",
+            "cpf_trackPtRel",
+            "cpf_trackPPar",
+            "cpf_trackDeltaR",
+            "cpf_trackPParRatio",
+            "cpf_trackPtRatio",
+            "cpf_trackSip2dVal",
+            "cpf_trackSip2dSig",
+            "cpf_trackSip3dVal",
+            "cpf_trackSip3dSig",
+            "cpf_trackJetDistVal",
+            "cpf_trackJetDistSig",
+            "cpf_ptrel",
+            "cpf_drminsv",
+            "cpf_vertex_association",
+            "cpf_fromPV",
+            "cpf_puppi_weight",
+            "cpf_track_chi2",
+            "cpf_track_quality",
+            "cpf_track_ndof",
+            "cpf_matchedMuon",
+            "cpf_matchedElectron",
+            "cpf_matchedSV",
+            "cpf_numberOfValidPixelHits",
+            "cpf_pixelLayersWithMeasurement",
+            "cpf_numberOfValidStripHits",
+            "cpf_stripLayersWithMeasurement",
+            "cpf_relmassdrop",
+            "cpf_dzMin",
             
-            'cpf_matchedMuon',
-            'cpf_matchedElectron',
-            'cpf_matchedSV',
+            #"cpf_deta",
+            #"cpf_dphi",
         ],
         "preprocessing":{
             'cpf_ptrel':lambda x: tf.log(1e-6+tf.nn.relu(x)),
-            'cpf_deta':lambda x: tf.abs(x),
-            'cpf_dphi':lambda x: tf.abs(x),
+            #'cpf_deta':lambda x: tf.abs(x),
+            #'cpf_dphi':lambda x: tf.abs(x),
         
             'cpf_trackEtaRel':lambda x: tf.log(1+tf.abs(x)),
             'cpf_trackPtRel':lambda x: tf.log(1e-1+tf.nn.relu(1-x)),
@@ -212,26 +230,49 @@ featureDict = {
     
     "muon" : {
         "branches":[
-            'muon_ptrel',
-            'muon_jetDeltaR',
-            'muon_deta',
-            'muon_dphi',
-            'muon_numberOfMatchedStations',
-            'muon_numberOfValidPixelHits',
-            'muon_numberOfpixelLayersWithMeasurement',
-            'muon_2dIp',
-            'muon_2dIpSig',
-            'muon_3dIp',
-            'muon_3dIpSig',
-            'muon_chi2',
-            'muon_ndof',
-            'muon_caloIso',
-            'muon_ecalIso',
-            'muon_hcalIso',
-            'muon_sumPfChHadronPt',
-            'muon_sumPfNeuHadronEt',
-            'muon_Pfpileup',
-            'muon_sumPfPhotonEt',
+
+            "muon_ptrel",
+            "muon_EtaRel",
+            "muon_dphi",
+            "muon_deta",
+            "muon_energy",
+            "muon_jetDeltaR",
+            "muon_numberOfMatchedStations",
+
+            "muon_2dIP",
+            "muon_2dIPSig",
+            "muon_3dIP",
+            "muon_3dIPSig",
+
+            "muon_dxy",
+            "muon_dxyError",
+            "muon_dxySig",
+            "muon_dz",
+            "muon_dzError",
+            "muon_numberOfValidPixelHits",
+            "muon_numberOfpixelLayersWithMeasurement",
+            "muon_numberOfstripLayersWithMeasurement",
+
+            "muon_chi2",
+            "muon_ndof",
+
+            "muon_caloIso",
+            "muon_ecalIso",
+            "muon_hcalIso",
+
+            "muon_sumPfChHadronPt",
+            "muon_sumPfNeuHadronEt",
+            "muon_Pfpileup",
+            "muon_sumPfPhotonEt",
+
+            "muon_sumPfChHadronPt03",
+            "muon_sumPfNeuHadronEt03",
+            "muon_Pfpileup03",
+            "muon_sumPfPhotonEt03",
+
+            "muon_timeAtIpInOut",
+            "muon_timeAtIpInOutErr",
+            "muon_timeAtIpOutIn"
             
         ],
         "preprocessing":{
@@ -240,10 +281,10 @@ featureDict = {
             'muon_dphi': lambda x: tf.abs(x),
             'muon_jetDeltaR':lambda x: tf.log(1e-6+tf.nn.relu(x)),
             
-            'muon_2dIp':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            'muon_2dIpSig':lambda x: tf.log(tf.abs(x)+1e-3),
-            'muon_3dIp':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            'muon_3dIpSig':lambda x: tf.log(tf.abs(x)+1e-3),
+            'muon_2dIP':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            'muon_2dIPSig':lambda x: tf.log(tf.abs(x)+1e-3),
+            'muon_3dIP':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            'muon_3dIPSig':lambda x: tf.log(tf.abs(x)+1e-3),
             
             'muon_chi2':lambda x: tf.log(tf.nn.relu(x)+1e-6),
             'muon_caloIso':lambda x: tf.log(tf.nn.relu(x)+1e-6),
@@ -259,49 +300,89 @@ featureDict = {
     
     "electron" : {
         "branches":[
-            'electron_ptrel',
-            
-            'electron_jetDeltaR',
-            'electron_deta',
-            'electron_dphi',
-            'electron_isPassConversionVeto',
-            #'electron_convDist',
-            'electron_hadronicOverEm',
-            
-            'electron_nbOfMissingHits',
-            
-            'electron_2dIP',
-            'electron_2dIPSig',
-            'electron_3dIP',
-            'electron_3dIPSig',
-            
-            'electron_numberOfBrems',
-            #'electron_trackFbrem',
-            #'electron_fbrem',
-            
-            'electron_eSeedClusterOverP',
-            'electron_eSeedClusterOverPout',
-            
-            'electron_SC_energy',
-            'electron_SC_eSuperClusterOverP',
-            'electron_eTopOvere5x5',
-            #'electron_scE1x5Overe5x5',
-            #'electron_scE2x5MaxOvere5x5',
-            #'electron_scE5x5Rel',
-            #'electron_scSigmaEtaEta',
-            #'electron_scSigmaIEtaIEta',
-            #'electron_superClusterFbrem',
-            
-            'electron_neutralHadronIso',
-            'electron_particleIso',
-            'electron_photonIso',
-            'electron_puChargedHadronIso',
-            'electron_trackIso',
-            'electron_ecalPFClusterIso',
-            'electron_hcalPFClusterIso',
-            
-            'electron_hcalDepth1OverEcal',
-            'electron_hcalDepth2OverEcal',
+            "electron_ptrel",
+            "electron_jetDeltaR",
+            "electron_deta",
+            "electron_dphi",
+            "electron_energy",
+            "electron_EtFromCaloEn",
+            "electron_isEB",
+            "electron_isEE",
+            "electron_ecalEnergy",
+            "electron_isPassConversionVeto",
+            "electron_convDist",
+            "electron_convFlags",
+
+            "electron_convRadius",
+            "electron_hadronicOverEm",
+            "electron_ecalDrivenSeed",
+
+
+            "electron_SC_energy",
+            "electron_SC_deta",
+            "electron_SC_dphi",
+            "electron_SC_et",
+            "electron_SC_eSuperClusterOverP",
+            "electron_scPixCharge",
+            "electron_sigmaEtaEta",
+            "electron_sigmaIetaIeta",
+            "electron_sigmaIphiIphi",
+            "electron_r9",
+            "electron_superClusterFbrem",
+
+            "electron_2dIP",
+            "electron_2dIPSig",
+            "electron_3dIP",
+            "electron_3dIPSig",
+            "electron_eSeedClusterOverP",
+            "electron_eSeedClusterOverPout",
+            "electron_eSuperClusterOverP",
+
+            "electron_deltaEtaEleClusterTrackAtCalo",
+            "electron_deltaEtaSeedClusterTrackAtCalo",
+            "electron_deltaPhiSeedClusterTrackAtCalo",
+            "electron_deltaEtaSeedClusterTrackAtVtx",
+            "electron_deltaEtaSuperClusterTrackAtVtx",
+            "electron_deltaPhiEleClusterTrackAtCalo",
+            "electron_deltaPhiSuperClusterTrackAtVtx",
+            "electron_sCseedEta",
+
+            "electron_EtaRel",
+            "electron_dxy",
+            "electron_dz",
+            "electron_nbOfMissingHits",
+            "electron_ndof",
+            "electron_chi2",
+
+            "electron_numberOfBrems",
+            "electron_fbrem",
+
+            "electron_e5x5",
+            "electron_e5x5Rel",
+            "electron_e2x5MaxOvere5x5",
+            "electron_e1x5Overe5x5",
+
+            "electron_neutralHadronIso",
+            "electron_particleIso",
+            "electron_photonIso",
+            "electron_puChargedHadronIso",
+            "electron_trackIso",
+            "electron_hcalDepth1OverEcal",
+            "electron_hcalDepth2OverEcal",
+            "electron_ecalPFClusterIso",
+            "electron_hcalPFClusterIso",
+            "electron_pfSumPhotonEt",
+            "electron_pfSumChargedHadronPt",
+            "electron_pfSumNeutralHadronEt",
+            "electron_pfSumPUPt",
+            "electron_dr04TkSumPt",
+            "electron_dr04EcalRecHitSumEt",
+            "electron_dr04HcalDepth1TowerSumEt",
+            "electron_dr04HcalDepth1TowerSumEtBc",
+            "electron_dr04HcalDepth2TowerSumEt",
+            "electron_dr04HcalDepth2TowerSumEtBc",
+            "electron_dr04HcalTowerSumEt",
+            "electron_dr04HcalTowerSumEtBc"
             
         ],
         "preprocessing":{
@@ -320,10 +401,7 @@ featureDict = {
             'electron_2dIPSig':lambda x: tf.log(tf.abs(x)+1e-3),
             'electron_3dIP':lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
             'electron_3dIPSig':lambda x: tf.log(tf.abs(x)+1e-3),
-            
-            #'electron_fbrem': lambda x: tf.nn.relu(x+1),
-            
-            
+
             'electron_neutralHadronIso':lambda x: tf.log(tf.nn.relu(x)+1e-6),
             'electron_photonIso':lambda x: tf.log(tf.nn.relu(x)+1e-6),
             'electron_puChargedHadronIso':lambda x: tf.log(tf.nn.relu(x)+1e-6),
@@ -339,5 +417,4 @@ featureDict = {
     
 }
 
-            
-
+           

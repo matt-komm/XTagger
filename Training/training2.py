@@ -73,7 +73,7 @@ else:
     logging.info( "Creating output folder '%s'!" % outputFolder)
     os.makedirs(outputFolder)
     
-from xtools import BigAttentionNetwork as Network
+from xtools import AttentionNetwork as Network
 shutil.copyfile(inspect.getsourcefile(Network),os.path.join(args.outputFolder,"Network.py"))  
 
 
@@ -117,8 +117,8 @@ resampleWeights = xtools.ResampleWeights(
     trainInputs.getFileList(),
     featureDict['truth']['names'],
     featureDict['truth']['weights'],
-    targetWeight='jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_QQ||jetorigin_isLLP_Q',
-    ptBinning=np.concatenate([np.linspace(10,40,7),np.logspace(math.log10(50),math.log10(100),4)]),
+    targetWeight='jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD',
+    ptBinning=np.array([10., 15., 20., 25., 30., 35., 40., 50., 60., 75., 120.]),
     etaBinning=np.linspace(-2.4,2.4,6)
 )
 
@@ -176,7 +176,7 @@ for epoch in range(args.resume, args.nepochs):
 
     network = Network(featureDict)
     modelClass = network.makeClassModel()
-    learningRate = 0.01/(1+args.kappa*epoch)
+    learningRate = 0.01/(1+args.kappa*max(0,epoch-2))
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
     modelClass.compile(
         optClass,
@@ -187,11 +187,11 @@ for epoch in range(args.resume, args.nepochs):
     if epoch==0:
         modelClass.summary()
 
-    train_batch = pipelineTrain.init(isLLPFct = lambda batch: (batch["truth"][:, 5]) > 0.5)
-    test_batch = pipelineTest.init(isLLPFct = lambda batch: (batch["truth"][:, 5]) > 0.5)
+    train_batch = pipelineTrain.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 5:],axis=1) > 0.5)
+    test_batch = pipelineTest.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 5:],axis=1) > 0.5)
     perf_batches = []
     for perfPipeline in perfPipelines:
-        perf_batches.append(perfPipeline.init(isLLPFct = lambda batch: (batch["truth"][:, 5]) > 0.5))
+        perf_batches.append(perfPipeline.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 5:],axis=1) > 0.5))
     
     if epoch==0:
         distributions = resampleWeights.makeDistribution(np.linspace(-4,6,21))

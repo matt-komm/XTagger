@@ -188,7 +188,17 @@ static const std::vector<Feature> globalFeatures{
     Feature("global_circularity"),
     Feature("global_isotropy"),
     Feature("global_eventShapeC"),
-    Feature("global_eventShapeD")
+    Feature("global_eventShapeD"),
+    
+    Feature("global_beta"),
+    Feature("global_dR2Mean"),
+    Feature("global_frac01"),
+    Feature("global_frac02"),
+    Feature("global_frac03"),
+    Feature("global_frac04"),
+    Feature("global_jetR"),
+    Feature("global_jetRchg") 
+
 };
 
 static const std::vector<Feature> csvFeatures{ 
@@ -412,7 +422,7 @@ class UnpackedTree
 {
     public:
         const bool addTruth_;
-        TFile* outputFile_;
+        std::unique_ptr<TFile> outputFile_;
         TTree* tree_;
         
         
@@ -436,22 +446,33 @@ class UnpackedTree
         float jetorigin_isS;
         float jetorigin_isUD;
         float jetorigin_isG;
+        
         //Include LLP flavour : 
         float jetorigin_isLLP_RAD; //no flavour match (likely from wide angle radiation)
+        float jetorigin_isLLP_Q;
+        float jetorigin_isLLP_QQ;
+        
+        float jetorigin_isLLP_B;
+        float jetorigin_isLLP_BB;
+        
         float jetorigin_isLLP_MU; //prompt lepton
+        float jetorigin_isLLP_QMU;
+        float jetorigin_isLLP_QQMU;
+        
+        float jetorigin_isLLP_BMU;
+        float jetorigin_isLLP_BBMU;
+        
         float jetorigin_isLLP_E; //prompt lepton
-        float jetorigin_isLLP_Q; //single light quark
-        float jetorigin_isLLP_QMU; //single light quark + prompt lepton
-        float jetorigin_isLLP_QE; //single light quark + prompt lepton
-        float jetorigin_isLLP_QQ; //double light quark
-        float jetorigin_isLLP_QQMU; //double light quark + prompt lepton
-        float jetorigin_isLLP_QQE; //double light quark + prompt lepton
-        float jetorigin_isLLP_B; //single b/c quark
-        float jetorigin_isLLP_BMU; //single b/c quark + prompt lepton
-        float jetorigin_isLLP_BE; //single b/c quark + prompt lepton
-        float jetorigin_isLLP_BB; //double b/c quark
-        float jetorigin_isLLP_BBMU; //double b/c quark + prompt lepton
-        float jetorigin_isLLP_BBE; //double b/c quark + prompt lepton
+        float jetorigin_isLLP_QE;
+        float jetorigin_isLLP_QQE;
+        
+        float jetorigin_isLLP_BE;
+        float jetorigin_isLLP_BBE;
+       
+        float jetorigin_isLLP_TAU;
+        float jetorigin_isLLP_QTAU;
+        float jetorigin_isLLP_QQTAU;
+
         float jetorigin_isUndefined;
         
         float jetorigin_displacement;
@@ -514,12 +535,16 @@ class UnpackedTree
     public:
         UnpackedTree(const std::string& fileName, bool addTruth=true):
             addTruth_(addTruth),
-            outputFile_(new TFile(fileName.c_str(),"RECREATE")),
-            tree_(new TTree("jets","jets"))
+            outputFile_(new TFile(fileName.c_str(),"RECREATE"))
         {
+            if (not outputFile_->IsOpen())
+            {
+                throw std::runtime_error("Output file cannot be created: "+fileName);
+            }
 
-            tree_->SetDirectory(outputFile_);
-            tree_->SetAutoSave(200); //save after 200 fills
+            tree_ = new TTree("jets","jets");  
+            tree_->SetDirectory(outputFile_.get());
+            tree_->SetAutoSave(500); //save after 200 fills
             
             if (addTruth)
             {
@@ -537,22 +562,30 @@ class UnpackedTree
                 tree_->Branch("jetorigin_isG",&jetorigin_isG,"jetorigin_isG/F",bufferSize);
                 
                 //Add LLP flavour : 
-                tree_->Branch("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD , "jetorigin_isLLP_RAD/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_MU",&jetorigin_isLLP_MU , "jetorigin_isLLP_MU/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_E",&jetorigin_isLLP_E , "jetorigin_isLLP_E/F", bufferSize) ;
-                tree_->Branch("jetorigin_isLLP_Q",&jetorigin_isLLP_Q , "jetorigin_isLLP_Q/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU, "jetorigin_isLLP_QMU/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QE",&jetorigin_isLLP_QE , "jetorigin_isLLP_QE/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ , "jetorigin_isLLP_QQ/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU ,"jetorigin_isLLP_QQMU/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE , "jetorigin_isLLP_QQE/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE ,"jetorigin_isLLP_QQE/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_B",&jetorigin_isLLP_B , "jetorigin_isLLP_B/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU , "jetorigin_isLLP_BMU/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_BE",&jetorigin_isLLP_BE ,"jetorigin_isLLP_BE/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_BB",&jetorigin_isLLP_BB, "jetorigin_isLLP_BB/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU , "jetorigin_isLLP_BBMU/F", bufferSize) ; 
-                tree_->Branch("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE , "jetorigin_isLLP_BBE/F", bufferSize) ; 
+                tree_->Branch("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD, "jetorigin_isLLP_RAD/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_Q",&jetorigin_isLLP_Q, "jetorigin_isLLP_Q/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ, "jetorigin_isLLP_QQ/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_B",&jetorigin_isLLP_B, "jetorigin_isLLP_B/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_BB",&jetorigin_isLLP_BB, "jetorigin_isLLP_BB/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_MU",&jetorigin_isLLP_MU, "jetorigin_isLLP_MU/F", bufferSize); 
+                tree_->Branch("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU, "jetorigin_isLLP_QMU/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU, "jetorigin_isLLP_QQMU/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU, "jetorigin_isLLP_BMU/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU, "jetorigin_isLLP_BBMU/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_E",&jetorigin_isLLP_E, "jetorigin_isLLP_E/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_QE",&jetorigin_isLLP_QE, "jetorigin_isLLP_QE/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE, "jetorigin_isLLP_QQE/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_BE",&jetorigin_isLLP_BE, "jetorigin_isLLP_BE/F", bufferSize);
+                tree_->Branch("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE, "jetorigin_isLLP_BBE/F", bufferSize);
+                
+                tree_->Branch("jetorigin_isLLP_TAU",&jetorigin_isLLP_TAU, "jetorigin_isLLP_TAU/F", bufferSize); 
+                tree_->Branch("jetorigin_isLLP_QTAU",&jetorigin_isLLP_QTAU, "jetorigin_isLLP_QTAU/F", bufferSize); 
+                tree_->Branch("jetorigin_isLLP_QQTAU",&jetorigin_isLLP_QQTAU, "jetorigin_isLLP_QQTAU/F", bufferSize); 
 
                 tree_->Branch("jetorigin_isUndefined",&jetorigin_isUndefined,"jetorigin_isUndefined/F",bufferSize);
                 
@@ -606,10 +639,7 @@ class UnpackedTree
         
         ~UnpackedTree()
         {
-            if (outputFile_)
-            {
-                delete outputFile_;
-            }
+            
             //Note: TTree is managed by TFile and gets deleted by ROOT when file is closed
         }
         
@@ -639,7 +669,7 @@ class NanoXTree
         
         int ientry_;
         
-        static constexpr int maxJets = 30; //allows for a maximum of 30 jets per event
+        static constexpr int maxJets = 50; //allows for a maximum of 50 jets per event
         static constexpr int maxEntries_global = maxJets;
         static constexpr int maxEntries_cpf = UnpackedTree::maxEntries_cpf*maxJets;
         static constexpr int maxEntries_npf = UnpackedTree::maxEntries_npf*maxJets;
@@ -661,9 +691,9 @@ class NanoXTree
         int Jet_electronIdx2[maxEntries_global];
         
         unsigned int nMuon;        
-        float Muon_pt[10];
+        float Muon_pt[20];
         unsigned int nElectron;
-        float Electron_pt[10];
+        float Electron_pt[20];
         
         float Jet_forDA[maxEntries_global];
         int Jet_genJetIdx[maxEntries_global];
@@ -687,20 +717,30 @@ class NanoXTree
         int jetorigin_isG[maxEntries_global];
 
         int jetorigin_isLLP_RAD[maxEntries_global]; 
-        int jetorigin_isLLP_MU[maxEntries_global]; 
-        int jetorigin_isLLP_E[maxEntries_global]; 
         int jetorigin_isLLP_Q[maxEntries_global];
-        int jetorigin_isLLP_QMU[maxEntries_global]; 
-        int jetorigin_isLLP_QE[maxEntries_global]; 
-        int jetorigin_isLLP_QQ[maxEntries_global]; 
-        int jetorigin_isLLP_QQMU[maxEntries_global]; 
-        int jetorigin_isLLP_QQE[maxEntries_global]; 
+        int jetorigin_isLLP_QQ[maxEntries_global];
+        
         int jetorigin_isLLP_B[maxEntries_global]; 
-        int jetorigin_isLLP_BMU[maxEntries_global];
-        int jetorigin_isLLP_BE[maxEntries_global]; 
         int jetorigin_isLLP_BB[maxEntries_global]; 
-        int jetorigin_isLLP_BBMU[maxEntries_global]; 
-        int jetorigin_isLLP_BBE[maxEntries_global]; 
+        
+        int jetorigin_isLLP_MU[maxEntries_global]; 
+        int jetorigin_isLLP_QMU[maxEntries_global];
+        int jetorigin_isLLP_QQMU[maxEntries_global];
+        
+        int jetorigin_isLLP_BMU[maxEntries_global];
+        int jetorigin_isLLP_BBMU[maxEntries_global];
+        
+        int jetorigin_isLLP_E[maxEntries_global]; 
+        int jetorigin_isLLP_QE[maxEntries_global];
+        int jetorigin_isLLP_QQE[maxEntries_global];
+        
+        int jetorigin_isLLP_BE[maxEntries_global];
+        int jetorigin_isLLP_BBE[maxEntries_global];
+        
+        int jetorigin_isLLP_TAU[maxEntries_global];
+        int jetorigin_isLLP_QTAU[maxEntries_global];
+        int jetorigin_isLLP_QQTAU[maxEntries_global];
+        
         int jetorigin_isUndefined[maxEntries_global];
         
         float jetorigin_displacement[maxEntries_global];
@@ -778,20 +818,30 @@ class NanoXTree
         float isG;
 
         float isLLP_RAD;
-        float isLLP_MU;
-        float isLLP_E;
         float isLLP_Q;
-        float isLLP_QMU;
-        float isLLP_QE;
         float isLLP_QQ;
-        float isLLP_QQMU;
-        float isLLP_QQE;
+        
         float isLLP_B;
-        float isLLP_BMU;
-        float isLLP_BE;
         float isLLP_BB;
+        
+        float isLLP_MU;
+        float isLLP_QMU;
+        float isLLP_QQMU;
+        
+        float isLLP_BMU;
         float isLLP_BBMU;
+        
+        float isLLP_E;
+        float isLLP_QE;
+        float isLLP_QQE;
+        
+        float isLLP_BE;
         float isLLP_BBE;
+        
+        float isLLP_TAU;
+        float isLLP_QTAU;
+        float isLLP_QQTAU;
+        
         float isPU;
         
         float isB_ANY;
@@ -838,7 +888,7 @@ class NanoXTree
         ):
             tree_(tree),
             addTruth_(addTruth),
-            ientry_(-1),
+            ientry_(0),
             randomGenerator_(12345),
             uniform_dist_(0,1.)
         {
@@ -899,24 +949,30 @@ class NanoXTree
                 tree_->SetBranchAddress("jetorigin_isG",&jetorigin_isG);
                 tree_->SetBranchAddress("jetorigin_isPU",&jetorigin_isPU);
 
-                tree_->SetBranchAddress("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD ) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_MU",&jetorigin_isLLP_MU) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_E",&jetorigin_isLLP_E ) ;
-                tree_->SetBranchAddress("jetorigin_isLLP_Q",&jetorigin_isLLP_Q ) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_QE",&jetorigin_isLLP_QE) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ ); 
-                tree_->SetBranchAddress("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU ); 
-                tree_->SetBranchAddress("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE ) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_B",&jetorigin_isLLP_B) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_BE",&jetorigin_isLLP_BE ) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_BB",&jetorigin_isLLP_BB) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU) ; 
-                tree_->SetBranchAddress("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE ) ; 
-
+                tree_->SetBranchAddress("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD); 
+                tree_->SetBranchAddress("jetorigin_isLLP_Q",&jetorigin_isLLP_Q);
+                tree_->SetBranchAddress("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ);
                 
+                tree_->SetBranchAddress("jetorigin_isLLP_B",&jetorigin_isLLP_B);
+                tree_->SetBranchAddress("jetorigin_isLLP_BB",&jetorigin_isLLP_BB);
+                
+                tree_->SetBranchAddress("jetorigin_isLLP_MU",&jetorigin_isLLP_MU); 
+                tree_->SetBranchAddress("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU); 
+                tree_->SetBranchAddress("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU); 
+                
+                tree_->SetBranchAddress("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU); 
+                tree_->SetBranchAddress("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU); 
+                
+                tree_->SetBranchAddress("jetorigin_isLLP_E",&jetorigin_isLLP_E);
+                tree_->SetBranchAddress("jetorigin_isLLP_QE",&jetorigin_isLLP_QE);
+                tree_->SetBranchAddress("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE);
+                
+                tree_->SetBranchAddress("jetorigin_isLLP_BE",&jetorigin_isLLP_BE);
+                tree_->SetBranchAddress("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE);
+                
+                tree_->SetBranchAddress("jetorigin_isLLP_TAU",&jetorigin_isLLP_TAU);
+                tree_->SetBranchAddress("jetorigin_isLLP_QTAU",&jetorigin_isLLP_QTAU);
+                tree_->SetBranchAddress("jetorigin_isLLP_QQTAU",&jetorigin_isLLP_QQTAU);
             }
             else
             {
@@ -981,21 +1037,31 @@ class NanoXTree
             
             symbolTable_.add_variable("isPU",isPU);
             
-            symbolTable_.add_variable("isLLP_RAD" ,isLLP_RAD) ; 
-            symbolTable_.add_variable("isLLP_MU" ,isLLP_MU) ; 
-            symbolTable_.add_variable("isLLP_E",isLLP_E) ; 
-            symbolTable_.add_variable("isLLP_Q" ,isLLP_Q) ; 
-            symbolTable_.add_variable("isLLP_QMU" ,isLLP_QMU) ; 
-            symbolTable_.add_variable("isLLP_QE" ,isLLP_QE) ; 
-            symbolTable_.add_variable("isLLP_QQ" ,isLLP_QQ ) ; 
-            symbolTable_.add_variable("isLLP_QQMU" ,isLLP_QQMU) ; 
-            symbolTable_.add_variable("isLLP_QQE" ,isLLP_QQE) ; 
-            symbolTable_.add_variable("isLLP_B" ,isLLP_B) ; 
-            symbolTable_.add_variable("isLLP_BMU" ,isLLP_BMU) ; 
-            symbolTable_.add_variable("isLLP_BE" ,isLLP_BE) ; 
-            symbolTable_.add_variable("isLLP_BB" ,isLLP_BB) ; 
-            symbolTable_.add_variable("isLLP_BBMU" ,isLLP_BBMU) ; 
-            symbolTable_.add_variable("isLLP_BBE" ,isLLP_BBE) ; 
+            symbolTable_.add_variable("isLLP_RAD" ,isLLP_RAD); 
+            symbolTable_.add_variable("isLLP_Q" ,isLLP_Q); 
+            symbolTable_.add_variable("isLLP_QQ" ,isLLP_QQ);
+            
+            symbolTable_.add_variable("isLLP_B" ,isLLP_B); 
+            symbolTable_.add_variable("isLLP_BB" ,isLLP_BB);  
+            
+            
+            symbolTable_.add_variable("isLLP_MU" ,isLLP_MU); 
+            symbolTable_.add_variable("isLLP_QMU" ,isLLP_QMU); 
+            symbolTable_.add_variable("isLLP_QQMU" ,isLLP_QQMU); 
+            
+            symbolTable_.add_variable("isLLP_BMU" ,isLLP_BMU); 
+            symbolTable_.add_variable("isLLP_BBMU" ,isLLP_BBMU); 
+            
+            symbolTable_.add_variable("isLLP_E",isLLP_E); 
+            symbolTable_.add_variable("isLLP_QE",isLLP_QE); 
+            symbolTable_.add_variable("isLLP_QQE",isLLP_QQE); 
+            
+            symbolTable_.add_variable("isLLP_BE",isLLP_BE); 
+            symbolTable_.add_variable("isLLP_BBE",isLLP_BBE); 
+            
+            symbolTable_.add_variable("isLLP_TAU",isLLP_TAU);
+            symbolTable_.add_variable("isLLP_QTAU",isLLP_QTAU);
+            symbolTable_.add_variable("isLLP_QQTAU",isLLP_QQTAU);
             
             symbolTable_.add_variable("isB_ANY",isB_ANY);
             symbolTable_.add_variable("isC_ANY",isC_ANY);
@@ -1152,7 +1218,7 @@ class NanoXTree
                 }
             }
             
-            if (this->njets()<jet)
+            if (this->njets()<=jet)
             {
                 std::cout<<"Not enough jets to unpack"<<std::endl;
                 return false;
@@ -1203,40 +1269,59 @@ class NanoXTree
                 isG = jetorigin_isG[indexOrigin];
  
                 isLLP_RAD= jetorigin_isLLP_RAD[indexOrigin];  
-                isLLP_MU= jetorigin_isLLP_MU[indexOrigin];  
-                isLLP_E= jetorigin_isLLP_E[indexOrigin];  
                 isLLP_Q= jetorigin_isLLP_Q[indexOrigin];  
-                isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];  
-                isLLP_QE= jetorigin_isLLP_QE[indexOrigin];  
                 isLLP_QQ= jetorigin_isLLP_QQ[indexOrigin];  
-                isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];  
-                isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];  
+                
                 isLLP_B= jetorigin_isLLP_B[indexOrigin];  
-                isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];  
-                isLLP_BE= jetorigin_isLLP_BE[indexOrigin];  
                 isLLP_BB= jetorigin_isLLP_BB[indexOrigin];  
+                
+                isLLP_E= jetorigin_isLLP_E[indexOrigin];
+                isLLP_QE= jetorigin_isLLP_QE[indexOrigin];  
+                isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];  
+                
+                isLLP_BE= jetorigin_isLLP_BE[indexOrigin];
+                isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];
+                
+                isLLP_MU= jetorigin_isLLP_MU[indexOrigin];  
+                isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];  
+                isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];  
+                
+                isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];  
                 isLLP_BBMU= jetorigin_isLLP_BBMU[indexOrigin];  
-                isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];  
+                
+                isLLP_TAU= jetorigin_isLLP_TAU[indexOrigin];
+                isLLP_QTAU= jetorigin_isLLP_QTAU[indexOrigin];
+                isLLP_QQTAU= jetorigin_isLLP_QQTAU[indexOrigin];
+                
+               
                 
                 isPU = jetorigin_isPU[indexOrigin];
                 
                 isB_ANY = isB+isBB+isGBB+isLeptonic_B+isLeptonic_C;
                 isC_ANY = isC+isCC+isGCC;
-                isLLP_ANY = isLLP_RAD+isLLP_MU+isLLP_E+isLLP_Q+isLLP_QMU+isLLP_QE+isLLP_QQ+isLLP_QQMU+isLLP_QQE
-                            +isLLP_B+isLLP_BMU+isLLP_BE+isLLP_BB+isLLP_BBMU+isLLP_BBE;
+                isLLP_ANY = isLLP_RAD+isLLP_Q+isLLP_QQ+isLLP_B+isLLP_BB
+                            +isLLP_MU+isLLP_QMU+isLLP_QQMU
+                            +isLLP_BMU+isLLP_BBMU
+                            +isLLP_E+isLLP_QE+isLLP_QQE
+                            +isLLP_BE+isLLP_BBE
+                            +isLLP_TAU+isLLP_QTAU+isLLP_QQTAU;
+                
                
                 if ((isB_ANY+isC_ANY+
                     +isS+isUD+isG+isPU
                     +isLLP_ANY+jetorigin_isUndefined[indexOrigin])!=1)
                 {
                     std::cout<<"Error - label sum is not 1"<<std::endl;
-                    std::cout<<"isB: "<<isB<<", isBB: "<<isBB<<", isGBB: "<<isGBB<<", isLeptonic_B: "<<isLeptonic_B<<", isLeptonic_C: "<<isLeptonic_C;
-                    std::cout<<", isC: "<<isC<<", isCC: "<<isCC<<", isGCC: "<<isGCC<<", isS: "<<isS<<", isUD: "<<isUD<<", isG: "<<isG<<", isPU: "<<isPU;
-                    std::cout<<", isLLP_RAD: "<<isLLP_RAD<<", isLLP_MU: "<<isLLP_MU<<", isLLP_E: "<<isLLP_E<<", isLLP_Q: "<<isLLP_Q;
-                    std::cout<<", isLLP_QMU: "<<isLLP_QMU<<", isLLP_QE: "<<isLLP_QE<<", isLLP_QQ: "<<isLLP_QQ<<", isLLP_QQMU: "<<isLLP_QQMU;
-                    std::cout<<", isLLP_QQE: "<<isLLP_QQE<<", isLLP_B: "<<isLLP_B<<", isLLP_BMU: "<<isLLP_BMU<<", isLLP_BE: "<<isLLP_BE;
-                    std::cout<<", isLLP_BB: "<<isLLP_BB<<", isLLP_BBMU: "<<isLLP_BBMU<<", isLLP_BBE: "<<isLLP_BBE;
-                    std::cout<<", isLLP_ANY: "<<isLLP_ANY<<", isUndefined: "<<jetorigin_isUndefined[jet]<<std::endl;
+                    std::cout<<"  isB: "<<isB<<", isBB: "<<isBB<<", isGBB: "<<isGBB<<", isLeptonic_B: "<<isLeptonic_B<<", isLeptonic_C: "<<isLeptonic_C<<std::endl;
+                    std::cout<<"  isC: "<<isC<<", isCC: "<<isCC<<", isGCC: "<<isGCC<<", isS: "<<isS<<", isUD: "<<isUD<<", isG: "<<isG<<", isPU: "<<isPU<<std::endl;
+                    std::cout<<"  isLLP_RAD: "<<isLLP_RAD<<", isLLP_Q: "<<isLLP_Q<<", isLLP_QQ: "<<isLLP_QQ<<", isLL_B: "<<isLLP_B<<", isLLP_BB: "<<isLLP_BB<<std::endl;
+                    std::cout<<"  isLLP_MU: "<<isLLP_MU<<", isLLP_QMU: "<<isLLP_QMU<<", isLLP_QQMU: "<<isLLP_QQMU<<std::endl;
+                    std::cout<<"  isLLP_BMU: "<<isLLP_BMU<<", isLLP_BBMU: "<<isLLP_BBMU<<std::endl;
+                    std::cout<<"  isLLP_E: "<<isLLP_E<<", isLLP_QE: "<<isLLP_QE<<", isLLP_QQE: "<<isLLP_QQE<<std::endl;
+                    std::cout<<"  isLLP_BE: "<<isLLP_BE<<", isLLP_BBE: "<<isLLP_BBE<<std::endl;
+                    std::cout<<"  isLLP_TAU: "<<isLLP_TAU<<", isLLP_QTAU: "<<isLLP_QTAU<<", isLLP_QQTAU: "<<isLLP_QQTAU<<std::endl;
+                    
+                    std::cout<<"  isLLP_ANY: "<<isLLP_ANY<<", isUndefined: "<<jetorigin_isUndefined[jet]<<std::endl;
                     return false;
                 }
                
@@ -1258,21 +1343,32 @@ class NanoXTree
                 isS = 0;
                 isUD = 0;
                 isG = 0;
+                
                 isLLP_RAD = 0;
-                isLLP_MU = 0;
-                isLLP_E = 0;
                 isLLP_Q = 0;
-                isLLP_QMU = 0;
-                isLLP_QE = 0;
                 isLLP_QQ = 0;
-                isLLP_QQMU = 0;
-                isLLP_QQE = 0;
+                
                 isLLP_B = 0;
-                isLLP_BMU = 0;
-                isLLP_BE = 0;
                 isLLP_BB = 0;
+                
+                isLLP_MU = 0;
+                isLLP_QMU = 0;
+                isLLP_QQMU = 0;
+                
+                isLLP_BMU = 0;
                 isLLP_BBMU = 0;
+                
+                isLLP_E = 0;
+                isLLP_QE = 0;
+                isLLP_QQE = 0;
+                
+                isLLP_BE = 0;
                 isLLP_BBE = 0;
+                
+                isLLP_TAU = 0;
+                isLLP_QTAU = 0;
+                isLLP_QQTAU = 0;
+
                 isPU = 0;
             }
             
@@ -1312,6 +1408,7 @@ class NanoXTree
                 if (jetorigin_jetIdx[ijet]==jet) indexOrigin = ijet;
             }
             
+            
             if (indexOrigin==-1) return 0;
 
             if  (jetorigin_isB[indexOrigin]>0.5) return 0;
@@ -1326,21 +1423,31 @@ class NanoXTree
             if  (jetorigin_isUD[indexOrigin]>0.5) return 9;
             if  (jetorigin_isG[indexOrigin]>0.5) return 10;
             if  (jetorigin_isPU[indexOrigin]>0.5) return 11;
+            
             if  (jetorigin_isLLP_RAD[indexOrigin]>0.5) return 12;
-            if  (jetorigin_isLLP_MU[indexOrigin]>0.5) return 13;
-            if  (jetorigin_isLLP_E[indexOrigin]>0.5) return 14;
-            if  (jetorigin_isLLP_Q[indexOrigin]>0.5) return 15;
-            if  (jetorigin_isLLP_QMU[indexOrigin]>0.5) return 16;
-            if  (jetorigin_isLLP_QE[indexOrigin]>0.5) return 17;
-            if  (jetorigin_isLLP_QQ[indexOrigin]>0.5) return 18;
+            if  (jetorigin_isLLP_Q[indexOrigin]>0.5) return 13;
+            if  (jetorigin_isLLP_QQ[indexOrigin]>0.5) return 14;
+            
+            if  (jetorigin_isLLP_B[indexOrigin]>0.5) return 15;
+            if  (jetorigin_isLLP_BB[indexOrigin]>0.5) return 16;
+            
+            if  (jetorigin_isLLP_MU[indexOrigin]>0.5) return 17;
+            if  (jetorigin_isLLP_QMU[indexOrigin]>0.5) return 18;
             if  (jetorigin_isLLP_QQMU[indexOrigin]>0.5) return 19;
-            if  (jetorigin_isLLP_QQE[indexOrigin]>0.5) return 20;
-            if  (jetorigin_isLLP_B[indexOrigin]>0.5) return 21;
-            if  (jetorigin_isLLP_BMU[indexOrigin]>0.5) return 22;
-            if  (jetorigin_isLLP_BE[indexOrigin]>0.5) return 23;
-            if  (jetorigin_isLLP_BB[indexOrigin]>0.5) return 24;
-            if  (jetorigin_isLLP_BBMU[indexOrigin]>0.5) return 25;
+            
+            if  (jetorigin_isLLP_BMU[indexOrigin]>0.5) return 20;
+            if  (jetorigin_isLLP_BBMU[indexOrigin]>0.5) return 21;
+            
+            if  (jetorigin_isLLP_E[indexOrigin]>0.5) return 22;
+            if  (jetorigin_isLLP_QE[indexOrigin]>0.5) return 23;
+            if  (jetorigin_isLLP_QQE[indexOrigin]>0.5) return 24;
+            
+            if  (jetorigin_isLLP_BE[indexOrigin]>0.5) return 25;
             if  (jetorigin_isLLP_BBE[indexOrigin]>0.5) return 26;
+
+            if  (jetorigin_isLLP_TAU[indexOrigin]>0.5) return 27;
+            if  (jetorigin_isLLP_QTAU[indexOrigin]>0.5) return 28;
+            if  (jetorigin_isLLP_QQTAU[indexOrigin]>0.5) return 29;
 
             return -1;
         }
@@ -1399,21 +1506,33 @@ class NanoXTree
                 unpackedTree.jetorigin_isUD = jetorigin_isUD[indexOrigin];
                 unpackedTree.jetorigin_isG = jetorigin_isG[indexOrigin];
                 unpackedTree.jetorigin_isPU = jetorigin_isPU[indexOrigin];
+                
+                
                 unpackedTree.jetorigin_isLLP_RAD= jetorigin_isLLP_RAD[indexOrigin];
-                unpackedTree.jetorigin_isLLP_MU= jetorigin_isLLP_MU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_E= jetorigin_isLLP_E[indexOrigin];
                 unpackedTree.jetorigin_isLLP_Q= jetorigin_isLLP_Q[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QE= jetorigin_isLLP_QE[indexOrigin];
                 unpackedTree.jetorigin_isLLP_QQ= jetorigin_isLLP_QQ[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];
+                
                 unpackedTree.jetorigin_isLLP_B= jetorigin_isLLP_B[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BE= jetorigin_isLLP_BE[indexOrigin];
                 unpackedTree.jetorigin_isLLP_BB= jetorigin_isLLP_BB[indexOrigin];
+                
+                unpackedTree.jetorigin_isLLP_MU= jetorigin_isLLP_MU[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];
+                
+                unpackedTree.jetorigin_isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];
                 unpackedTree.jetorigin_isLLP_BBMU= jetorigin_isLLP_BBMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];		
+                
+                unpackedTree.jetorigin_isLLP_E= jetorigin_isLLP_E[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QE= jetorigin_isLLP_QE[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];
+                
+                unpackedTree.jetorigin_isLLP_BE= jetorigin_isLLP_BE[indexOrigin];
+                unpackedTree.jetorigin_isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];
+                
+                unpackedTree.jetorigin_isLLP_TAU= jetorigin_isLLP_TAU[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QTAU= jetorigin_isLLP_QTAU[indexOrigin];
+                unpackedTree.jetorigin_isLLP_QQTAU= jetorigin_isLLP_QQTAU[indexOrigin];
+	
             }
             else
             {
@@ -1427,13 +1546,13 @@ class NanoXTree
             unpackedTree.global_eta = global_eta[indexGlobal];
             unpackedTree.global_phi = global_phi[indexGlobal];
 
-            if (unpackedTree.globalBranches.size()!=globalBranches.size()) throw std::runtime_error("Global branches have different size!");
+            if (unpackedTree.globalBranches.size()!=globalBranches.size()) throw std::runtime_error("Global branches have different size! "+std::to_string(unpackedTree.globalBranches.size())+"!="+std::to_string(globalBranches.size()));
             for (size_t ifeature = 0; ifeature < globalBranches.size(); ++ifeature)
             {
                 unpackedTree.globalBranches[ifeature]->setFloat(0,globalBranches[ifeature]->getFloat(indexGlobal));
             }
             
-            if (unpackedTree.csvBranches.size()!=csvBranches.size()) throw std::runtime_error("CSV branches have different size!");
+            if (unpackedTree.csvBranches.size()!=csvBranches.size()) throw std::runtime_error("CSV branches have different size! "+std::to_string(unpackedTree.csvBranches.size())+"!="+std::to_string(csvBranches.size()));
             for (size_t ifeature = 0; ifeature < csvBranches.size(); ++ifeature)
             {
                 unpackedTree.csvBranches[ifeature]->setFloat(0,csvBranches[ifeature]->getFloat(indexGlobal));
@@ -1453,7 +1572,7 @@ class NanoXTree
             int ncpf = std::min<int>(UnpackedTree::maxEntries_cpf,length_cpf[indexGlobal]);
             unpackedTree.ncpf = ncpf;
             
-            if (unpackedTree.cpfBranches.size()!=cpfBranches.size()) throw std::runtime_error("CPF branches have different size!");
+            if (unpackedTree.cpfBranches.size()!=cpfBranches.size()) throw std::runtime_error("CPF branches have different size! "+std::to_string(unpackedTree.cpfBranches.size())+"!="+std::to_string(cpfBranches.size()));
             
             for (size_t ifeature = 0; ifeature < cpfBranches.size(); ++ifeature)
             {
@@ -1477,7 +1596,7 @@ class NanoXTree
             int nnpf = std::min<int>(UnpackedTree::maxEntries_npf,length_npf[indexGlobal]);
             unpackedTree.nnpf = nnpf;
             
-            if (unpackedTree.npfBranches.size()!=npfBranches.size()) throw std::runtime_error("NPF branches have different size!");
+            if (unpackedTree.npfBranches.size()!=npfBranches.size()) throw std::runtime_error("NPF branches have different size! "+std::to_string(unpackedTree.npfBranches.size())+"!="+std::to_string(npfBranches.size()));
             
             for (size_t ifeature = 0; ifeature < npfBranches.size(); ++ifeature)
             {
@@ -1501,7 +1620,7 @@ class NanoXTree
             int nsv = std::min<int>(UnpackedTree::maxEntries_sv,length_sv[indexGlobal]);
             unpackedTree.nsv = nsv;
             
-            if (unpackedTree.svBranches.size()!=svBranches.size()) throw std::runtime_error("SV branches have different size!");
+            if (unpackedTree.svBranches.size()!=svBranches.size()) throw std::runtime_error("SV branches have different size! "+std::to_string(unpackedTree.svBranches.size())+"!="+std::to_string(svBranches.size()));
             
             for (size_t ifeature = 0; ifeature < svBranches.size(); ++ifeature)
             {
@@ -1525,7 +1644,7 @@ class NanoXTree
             int nmuon = std::min<int>(UnpackedTree::maxEntries_muon,length_muon[indexGlobal]);
             unpackedTree.nmuon = nmuon;
             
-            if (unpackedTree.muonBranches.size()!=muonBranches.size()) throw std::runtime_error("Muon branches have different size!");
+            if (unpackedTree.muonBranches.size()!=muonBranches.size()) throw std::runtime_error("Muon branches have different size! "+std::to_string(unpackedTree.muonBranches.size())+"!="+std::to_string(muonBranches.size()));
             for (size_t ifeature = 0; ifeature < muonBranches.size(); ++ifeature)
             {
                 for (int i = 0; i < nmuon; ++i)
@@ -1548,7 +1667,7 @@ class NanoXTree
             int nelectron = std::min<int>(UnpackedTree::maxEntries_electron,length_electron[indexGlobal]);
             unpackedTree.nelectron = nelectron;
 
-            if (unpackedTree.electronBranches.size()!=electronBranches.size()) throw std::runtime_error("Electron branches have different size!");
+            if (unpackedTree.electronBranches.size()!=electronBranches.size()) throw std::runtime_error("Electron branches have different size! "+std::to_string(unpackedTree.electronBranches.size())+"!="+std::to_string(electronBranches.size()));
             for (size_t ifeature = 0; ifeature < electronBranches.size(); ++ifeature)
             {
                 for (int i = 0; i < nelectron; ++i)
@@ -1762,10 +1881,10 @@ int main(int argc, char **argv)
     std::cout<<"Number of independent inputs: "<<trees.size()<<std::endl;
     std::cout<<"Total number of events: "<<total_entries<<std::endl;
     std::vector<std::unique_ptr<UnpackedTree>> unpackedTreesTrain;
-    std::vector<std::vector<int>> eventsPerClassPerFileTrain(27,std::vector<int>(nOutputs,0));
+    std::vector<std::vector<int>> eventsPerClassPerFileTrain(30,std::vector<int>(nOutputs,0));
     
     std::vector<std::unique_ptr<UnpackedTree>> unpackedTreesTest;
-    std::vector<std::vector<int>> eventsPerClassPerFileTest(27,std::vector<int>(nOutputs,0));
+    std::vector<std::vector<int>> eventsPerClassPerFileTest(30,std::vector<int>(nOutputs,0));
 
     for (unsigned int i = 0; i < nOutputs; ++i)
     {
@@ -1811,7 +1930,6 @@ int main(int argc, char **argv)
             sum_entries += int(1.*entries[ifile]/nSplit);
             if (hashEntries<sum_entries) break;
         }
-       
         trees[ifile]->nextEvent(); //this loops back to 0 in case it was the last event
         
         readEvents[ifile]+=1;

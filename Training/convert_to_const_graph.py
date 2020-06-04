@@ -4,6 +4,7 @@ import sys
 import tensorflow as tf
 import keras
 import numpy
+import imp
 from keras import backend as K
 from feature_dict import featureDict
 import xtools
@@ -12,10 +13,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--parametric', action='store_true',
                     dest='parametric',
                     help='train a parametric model', default=False)
+parser.add_argument('networkfile', metavar='networkfile', type=str, nargs=1,
+                    help='a network py file')
 parser.add_argument('weightfile', metavar='weightfile', type=str, nargs=1,
                     help='a weight file from keras')
 arguments = parser.parse_args()
 
+
+Network = imp.load_source('Network', arguments.networkfile[0]).network
 
 if not os.path.exists(arguments.weightfile[0]):
     print "Error - weight file '",arguments.weightfile[0],"' does not exists"
@@ -34,6 +39,8 @@ tf_sv = tf.placeholder('float32',shape=(None,featureDict["sv"]["max"],len(featur
 sv = keras.layers.Input(tensor=tf_sv)
 tf_muon = tf.placeholder('float32',shape=(None,featureDict["muon"]["max"],len(featureDict["muon"]["branches"])),name="muon")
 muon = keras.layers.Input(tensor=tf_muon)
+tf_electron = tf.placeholder('float32',shape=(None,featureDict["electron"]["max"],len(featureDict["electron"]["branches"])),name="electron")
+electron = keras.layers.Input(tensor=tf_electron)
 tf_globalvars = tf.placeholder('float32',shape=(None,len(featureDict["globalvars"]["branches"])),name="globalvars")
 globalvars = keras.layers.Input(tensor=tf_globalvars)
 
@@ -45,20 +52,18 @@ print "cpf shape: ",cpf.shape.as_list()
 print "npf shape: ",npf.shape.as_list()
 print "sv shape: ",sv.shape.as_list()
 print "muon shape: ",muon.shape.as_list()
+print "electron shape: ",electron.shape.as_list()
 print "globalvars shape: ",globalvars.shape.as_list()
 print "gen shape: ",gen.shape.as_list()
 
-network = xtools.NominalNetwork(
-    featureDict
-)
-
+network = Network(featureDict)
 print "learning phase: ",sess.run(keras.backend.learning_phase())
 
-class_prediction = network.predictClass(globalvars,cpf,npf,sv,muon,gen)
+class_prediction = network.predictClass(globalvars,cpf,npf,sv,muon,electron,gen)
     
 prediction = tf.identity(class_prediction,name="prediction")
 
-model = keras.Model(inputs=[gen, globalvars, cpf, npf, sv, muon], outputs=class_prediction)
+model = keras.Model(inputs=[gen, globalvars, cpf, npf, sv, muon, electron], outputs=class_prediction)
 
 train_writer = tf.summary.FileWriter("graph",sess.graph)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -73,8 +78,6 @@ def shape(tf_tensor):
 model.load_weights(arguments.weightfile[0])
 
 
-
-
 #test if graph can be executed
 feed_dict={
     tf_gen:numpy.zeros(shape(tf_gen)),
@@ -83,6 +86,7 @@ feed_dict={
     tf_npf:numpy.zeros(shape(tf_npf)),
     tf_sv:numpy.zeros(shape(tf_sv)),
     tf_muon:numpy.zeros(shape(tf_muon)),
+    tf_electron:numpy.zeros(shape(tf_electron)),
 }
 
 prediction_val = sess.run(
@@ -90,7 +94,7 @@ prediction_val = sess.run(
     feed_dict=feed_dict
 )
 
-print [n.name for n in sess.graph.as_graph_def().node]
+#print [n.name for n in sess.graph.as_graph_def().node]
 
 const_graph = tf.graph_util.convert_variables_to_constants(
     sess,
