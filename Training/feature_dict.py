@@ -1,43 +1,20 @@
 import tensorflow as tf
 
-'''
-        'names':[
-            'B','C','UDS','G','PU','LLP_QMU','LLP_Q',
-        ],
-        'weights':[
-            'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
-            'jetorigin_isC||jetorigin_isCC||jetorigin_isGCC',
-            'jetorigin_isUD||jetorigin_isS',
-            'jetorigin_isG',
-            'jetorigin_isPU*(global_pt<50.)',
-            'jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
-            '(jetorigin_isLLP_QQ||jetorigin_isLLP_Q)*(global_pt<50.)',
-        ],
-        "branches":[
-            'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
-            'jetorigin_isC||jetorigin_isCC||jetorigin_isGCC',
-            'jetorigin_isUD||jetorigin_isS',
-            'jetorigin_isG',
-            'jetorigin_isPU',
-            'jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
-            'jetorigin_isLLP_QQ+jetorigin_isLLP_Q'
-        ],
-    },
-'''
-
 featureDict = {
     "truth": {
         'names':[
-            'B','C','UDS','G','PU','LLP_MU','LLP_Q',
+            'B','C','UDS','G','PU','LLP_Q','LLP_MU','LLP_E','LLP_TAU',
         ],
         'weights':[
             'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
             'jetorigin_isC||jetorigin_isCC||jetorigin_isGCC',
             'jetorigin_isUD||jetorigin_isS',
             'jetorigin_isG',
-            '(jetorigin_isPU)*(global_pt<50.)',
+            '(jetorigin_isPU)*(global_pt<60.)',
+            '(jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD)*(global_pt<60.)',
             'jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
-            '(jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD)*(global_pt<50.)',
+            'jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE',
+            '(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)*(global_pt<60.)',
         ],
         "branches":[
             'jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C',         
@@ -45,8 +22,10 @@ featureDict = {
             'jetorigin_isUD||jetorigin_isS',
             'jetorigin_isG',
             'jetorigin_isPU',
+            'jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD',
             'jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU',
-            'jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD'
+            'jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE',
+            'jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU'
         ],
     },
     

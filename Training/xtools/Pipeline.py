@@ -77,7 +77,7 @@ class Pipeline():
             )
             if self.resample:
                 isSignal = isLLPFct(batch)
-                batch["gen"] = xtagger.fake_background(batch["gen"], isSignal, 0)
+                batch["gen"] = xtagger.fake_background(batch["gen"], isSignal, feature_index=0, rstart=-4, rend=4)
 
             return batch
 

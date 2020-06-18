@@ -31,7 +31,7 @@ parser.add_argument('--train', dest="trainFiles", default=[], action='append', h
 parser.add_argument('--test', dest="testFiles", default=[], action='append', help='input file list for testing jet class')
 parser.add_argument('--trainDA', dest="trainFilesDA", default=[], action='append', help='input file list for training jet domain')
 parser.add_argument('--testDA', dest="testFilesDA", default=[], action='append', help='input file list for testing jet domain')
-parser.add_argument('--perf', dest="perfList", default=[], action='append', help='input file list for testing jet domain')
+parser.add_argument('--perf', dest="perfList", default=[], action='append', help='input file list for performance test')
 parser.add_argument('-o', '--output', action='store', help='job name', dest='outputFolder', default='')
 parser.add_argument('-n', action='store', type=int, dest='maxFiles',
                     help='number of files to be processed')
@@ -60,6 +60,8 @@ parser.add_argument('-r', '--resume', type=int, help='resume training at given e
                     default=0, dest='resume')
 parser.add_argument('--lambda', type=float,help='domain loss weight',
                     default=0.3,dest='lambda')
+parser.add_argument('--lr', type=float,help='initial learning rate',
+                    default=0.01,dest='lr')
 parser.add_argument('--kappa', type=float,help='learning rate decay val',
                     default=0.1,dest='kappa')
 
@@ -92,9 +94,14 @@ logging.info("Epochs: %i"%args.nepochs)
 logging.info("Batch size: %i"%args.batchSize)
 logging.info("Random seed: %i"%args.seed)
 
+logging.info("Learning rate: %.3e"%args.lr)
+logging.info("Learning rate decay: %.3e"%args.kappa)
+
 random.seed(args.seed)
 np.random.seed(args.seed)
 tf.set_random_seed(args.seed)
+
+#TODO: make maxFiles a percentage
 
 trainInputs = xtools.InputFiles(maxFiles=args.maxFiles)
 for f in args.trainFiles: 
@@ -102,6 +109,9 @@ for f in args.trainFiles:
 testInputs = xtools.InputFiles(maxFiles=args.maxFiles)
 for f in args.testFiles: 
     testInputs.addFileList(f) 
+    
+logging.info("Training files %i"%trainInputs.nFiles())
+logging.info("Testing files %i"%testInputs.nFiles())
 
 #TODO make dict and read title/name from file saved as comments
 perfInputList = []
@@ -109,21 +119,24 @@ for perfFile in args.perfList:
     perfInputs = xtools.InputFiles(maxFiles=args.maxFiles)
     perfInputs.addFileList(perfFile)
     perfInputList.append(perfInputs)
+    logging.info("Perf files %i"%perfInputs.nFiles())
     
-logging.info("Training files %i"%trainInputs.nFiles())
-logging.info("Testing files %i"%testInputs.nFiles())
+
 
 resampleWeights = xtools.ResampleWeights(
     trainInputs.getFileList(),
     featureDict['truth']['names'],
     featureDict['truth']['weights'],
-    targetWeight='jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD',
+    targetWeight='jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD' \
+            +'||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU' \
+            +'||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE' \
+            +'||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU',
     ptBinning=np.array([10., 15., 20., 25., 30., 35., 40., 50., 60., 75., 120.]),
     etaBinning=np.linspace(-2.4,2.4,6)
 )
 
 resampleWeights.plot(os.path.join(outputFolder,"hists.pdf"))
-weights = resampleWeights.reweight(classBalance=True,oversampling=3)
+weights = resampleWeights.reweight(classBalance=True,oversampling=5)
 weights.plot(os.path.join(outputFolder,"weights.pdf"))
 weights.save(os.path.join(outputFolder,"weights.root"))
 
@@ -151,7 +164,7 @@ for perfInputs in perfInputList:
         featureDict, 
         resampleWeights.getLabelNameList(),
         os.path.join(outputFolder,"weights.root"),
-        args.batchSize,
+        batchSize=min(args.batchSize,max(100,int(round(perfInputs.nJets()/100.)))),
         resample=False,
         maxThreads=1
     ))
@@ -176,7 +189,8 @@ for epoch in range(args.resume, args.nepochs):
 
     network = Network(featureDict)
     modelClass = network.makeClassModel()
-    learningRate = 0.01/(1+args.kappa*max(0,epoch-2))
+    learningRateDecay = 1./(1.+args.kappa*max(0,epoch-2))
+    learningRate = args.lr*learningRateDecay
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
     modelClass.compile(
         optClass,
@@ -334,8 +348,8 @@ for epoch in range(args.resume, args.nepochs):
             auc = perfMonitor.auc()
             logging.info("Done perf %i for %i steps of epoch %i: auc=%.2f%%"%(iperf,step,epoch,100.*auc))
             
-            perfMonitor.save(os.path.join(outputFolder,'perf_%i.hdf5'%epoch))
-            perfMonitor.plot(os.path.join(outputFolder,'roc_%i.ps'%epoch))
+            perfMonitor.save(os.path.join(outputFolder,'perf_%i_%i.hdf5'%(iperf,epoch)))
+            perfMonitor.plot(os.path.join(outputFolder,'roc_%i_%i.ps'%(iperf,epoch)))
     resetSession()
     
 

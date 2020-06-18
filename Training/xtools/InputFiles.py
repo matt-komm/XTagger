@@ -1,5 +1,6 @@
 import logging
 import os
+import ROOT
 
 class InputFiles():
     def __init__(self, maxFiles=-1):
@@ -27,6 +28,12 @@ class InputFiles():
             return min(self.maxFiles,len(self.fileList))
         else:
             return len(self.fileList)
+            
+    def nJets(self):
+        chain = ROOT.TChain("jets")
+        for f in self.getFileList():
+            chain.AddFile(f)
+        return chain.GetEntries()
         
     def getFileList(self):
         return self.fileList[0:self.nFiles()]
