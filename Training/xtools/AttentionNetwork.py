@@ -50,7 +50,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                 ])
             else:
                 self.cpf_attention.extend([
-                    #keras.layers.Activation('sigmoid',name="cpf_attention_activation"+str(i+1)),
+                    keras.layers.Activation('sigmoid',name="cpf_attention_activation"+str(i+1)),
                     keras.layers.Dropout(0.1,name='cpf_attention_dropout'+str(i+1)),
                 ])
 
@@ -91,7 +91,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                 ])
             else:
                 self.npf_attention.extend([
-                    #keras.layers.Activation('sigmoid',name="npf_attention_activation"+str(i+1)),
+                    keras.layers.Activation('sigmoid',name="npf_attention_activation"+str(i+1)),
                     keras.layers.Dropout(0.1,name="npf_attention_droupout"+str(i+1)),
                 ])
         
@@ -142,6 +142,9 @@ class AttentionNetwork(xtools.NominalNetwork):
             ),
             keras.layers.Softmax(name="class_softmax")
         ])
+        
+    def returnsLogits(self):
+        return False
         
     def applyAttention(self,features,attention):
         result = keras.layers.Lambda(lambda x: tf.matmul(tf.transpose(x[0],[0,2,1]),x[1]))([attention,features])

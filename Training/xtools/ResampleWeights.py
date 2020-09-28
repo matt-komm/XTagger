@@ -25,7 +25,14 @@ class Weights():
         cv.GetPad(1).SetMargin(0.13,0.25,0.17,0.05)
         cv.GetPad(2).SetMargin(0.13,0.25,0.17,0.05)
         
-        color=[ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kGreen+1,ROOT.kBlue+1,ROOT.kMagenta, ROOT.kGray,ROOT.kGray+1,ROOT.kGray+2,ROOT.kBlack]
+        color=[
+            ROOT.kGreen,ROOT.kGreen+1,ROOT.kGreen+2,
+            ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kRed,ROOT.kRed+1,
+            ROOT.kGray,
+            ROOT.kBlack,
+            ROOT.kYellow,ROOT.kYellow+1,ROOT.kYellow+2,
+            ROOT.kOrange+1,ROOT.kOrange+2,ROOT.kOrange+2
+        ]
         
         ptNumeratorHists = {k: v['numerator'].ProjectionX() for k,v in self.weightHistsPerLabel.items()}
         ptDenominatorHists = {k: v['denominator'].ProjectionX() for k,v in self.weightHistsPerLabel.items()}
@@ -121,7 +128,14 @@ class ResampledDistribution():
         cv.GetPad(3).SetMargin(0.13,0.25,0.17,0.05)
         #cv.SetMargin(0.13,0.25,0.17,0.05)
         
-        color=[ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kGreen+1,ROOT.kBlue+1,ROOT.kMagenta, ROOT.kGray,ROOT.kGray+1,ROOT.kGray+2,ROOT.kBlack]
+        color=[
+            ROOT.kGreen,ROOT.kGreen+1,ROOT.kGreen+2,
+            ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kRed,ROOT.kRed+1,
+            ROOT.kGray,
+            ROOT.kBlack,
+            ROOT.kYellow,ROOT.kYellow+1,ROOT.kYellow+2,
+            ROOT.kOrange+1,ROOT.kOrange+2,ROOT.kOrange+2
+        ]
         
         cv.cd(1)
         axisPt = ROOT.TH2F(
@@ -185,7 +199,7 @@ class ResampleWeights():
         self.histPerLabel = {}
         
         if len(labelNameList)!=len(labelWeightList):
-            logging.critical("Length of label names and weights do not match!"%(len(labelNameList),len(labelWeightList)))
+            logging.critical("Length of label names (%i) and weights (%i) do not match!"%(len(labelNameList),len(labelWeightList)))
             sys.exit(1)
         
         chain = ROOT.TChain("jets")
@@ -324,7 +338,15 @@ class ResampleWeights():
         legend.SetFillStyle(0)
         legend.SetTextSize(30)
         
-        color=[ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kGreen+1,ROOT.kBlue+1,ROOT.kMagenta, ROOT.kGray,ROOT.kGray+1,ROOT.kGray+2,ROOT.kBlack]
+        color=[
+            ROOT.kGreen,ROOT.kGreen+1,ROOT.kGreen+2,
+            ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kRed,ROOT.kRed+1,
+            ROOT.kGray,
+            ROOT.kBlack,
+            ROOT.kYellow,ROOT.kYellow+1,ROOT.kYellow+2,
+            ROOT.kOrange+1,ROOT.kOrange+2,ROOT.kOrange+2
+        ]
+        
         for i,k in enumerate(self.labelNameList):
             ptHists[k].SetLineColor(color[i])
             ptHists[k].SetLineWidth(2+i%2)
@@ -334,6 +356,22 @@ class ResampleWeights():
         legend.Draw("Same")
             
         cv.Print(path)
-            
         
+        targetPtHist = self.histTarget.ProjectionX()
+        targetPtHist.SetLineColor(ROOT.kBlack)
+        targetPtHist.SetLineStyle(3)
+        targetPtHist.SetLineWidth(3)
+        for i,k in enumerate(self.labelNameList):
+            cvHist = xtools.style.makeCanvas(name="cvHist"+str(random.random()))
+            cvHist.SetMargin(0.13,0.25,0.17,0.05)
+            axisPt = ROOT.TH2F("axisPt"+str(random.random()),";"+k+" jet p#lower[0.2]{#scale[0.8]{T}} (GeV);#Jets",
+                len(self.ptBinning)-1,self.ptBinning,
+                50,np.linspace(0,1.1*max(targetPtHist.GetMaximum(),ptHists[k].GetMaximum()),51)
+            )
+            axisPt.Draw("AXIS")
+            ptHists[k].SetLineColor(ROOT.kOrange+10)
+            ptHists[k].SetLineStyle(1)
+            ptHists[k].Draw("SameHIST")
+            targetPtHist.Draw("SameHIST")
+            cvHist.Print(path.rsplit('.',1)[0]+"_"+k+"."+path.rsplit('.',1)[1])
 

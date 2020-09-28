@@ -213,7 +213,6 @@ class BigConvNetwork(NominalNetwork):
                 kernel_regularizer=keras.regularizers.l1(1e-6),
                 name="class_nclasses"
             ),
-            keras.layers.Softmax(name="class_softmax")
         ])
 
         

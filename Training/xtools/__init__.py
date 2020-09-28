@@ -5,6 +5,8 @@ from InputFiles import *
 from ResampleWeights import *
 from NominalNetwork import *
 from NominalNetworkNoLept import *
+from NominalNetworkOnlyGlobal import *
+from NominalNetworkFirstConst import *
 from DeepSetNetwork import *
 from BigConvNetwork import *
 from AttentionNetwork import *

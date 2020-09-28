@@ -2,6 +2,9 @@
 #include "TTree.h"
 #include "TChain.h"
 #include "TTreeFormula.h"
+#include "TH2F.h"
+#include "TRandom3.h"
+#include "TLorentzVector.h"
 
 #include <fstream>
 #include <iostream>
@@ -434,6 +437,10 @@ class UnpackedTree
 
         static constexpr int bufferSize = 64000; //default is 32kB
 
+        float jetorigin_isPrompt_E;
+        float jetorigin_isPrompt_MU;
+        float jetorigin_isPrompt_TAU;
+
         float jetorigin_isPU;
         float jetorigin_isB;
         float jetorigin_isBB;
@@ -548,6 +555,10 @@ class UnpackedTree
 
             if (addTruth)
             {
+                tree_->Branch("jetorigin_isPrompt_E",&jetorigin_isPrompt_E,"jetorigin_isPrompt_E/F",bufferSize);
+                tree_->Branch("jetorigin_isPrompt_MU",&jetorigin_isPrompt_MU,"jetorigin_isPrompt_MU/F",bufferSize);
+                tree_->Branch("jetorigin_isPrompt_TAU",&jetorigin_isPrompt_TAU,"jetorigin_isPrompt_TAU/F",bufferSize);
+
                 tree_->Branch("jetorigin_isPU",&jetorigin_isPU,"jetorigin_isPU/F",bufferSize);
                 tree_->Branch("jetorigin_isB",&jetorigin_isB,"jetorigin_isB/F",bufferSize);
                 tree_->Branch("jetorigin_isBB",&jetorigin_isBB,"jetorigin_isBB/F",bufferSize);
@@ -692,8 +703,12 @@ class NanoXTree
 
         unsigned int nMuon;
         float Muon_pt[20];
+        float Muon_eta[20];
+        float Muon_phi[20];
         unsigned int nElectron;
         float Electron_pt[20];
+        float Electron_eta[20];
+        float Electron_phi[20];
 
         float Jet_forDA[maxEntries_global];
         int Jet_genJetIdx[maxEntries_global];
@@ -702,6 +717,10 @@ class NanoXTree
 
         unsigned int njetorigin;
         int jetorigin_jetIdx[maxEntries_global];
+
+        int jetorigin_isPrompt_E[maxEntries_global];
+        int jetorigin_isPrompt_MU[maxEntries_global];
+        int jetorigin_isPrompt_TAU[maxEntries_global];
 
         int jetorigin_isPU[maxEntries_global];
         int jetorigin_isB[maxEntries_global];
@@ -804,6 +823,9 @@ class NanoXTree
         typedef exprtk::expression<float> Expression;
         typedef exprtk::parser<float> Parser;
 
+        float isPrompt_E;
+        float isPrompt_MU;
+        float isPrompt_TAU;
 
         float isB;
         float isBB;
@@ -844,6 +866,7 @@ class NanoXTree
 
         float isPU;
 
+        float isPrompt_ANY;
         float isB_ANY;
         float isC_ANY;
         float isLLP_ANY;
@@ -908,8 +931,13 @@ class NanoXTree
 
             tree_->SetBranchAddress("nMuon",&nMuon);
             tree_->SetBranchAddress("Muon_pt",&Muon_pt);
+            tree_->SetBranchAddress("Muon_eta",&Muon_eta);
+            tree_->SetBranchAddress("Muon_phi",&Muon_phi);
+
             tree_->SetBranchAddress("nElectron",&nElectron);
             tree_->SetBranchAddress("Electron_pt",&Electron_pt);
+            tree_->SetBranchAddress("Electron_eta",&Electron_eta);
+            tree_->SetBranchAddress("Electron_phi",&Electron_phi);
 
             if (addTruth)
             {
@@ -934,6 +962,10 @@ class NanoXTree
                 tree_->SetBranchAddress("jetorigin_llpId", &jetorigin_llpId);
                 tree_->SetBranchAddress("jetorigin_llp_mass", &jetorigin_llp_mass);
                 tree_->SetBranchAddress("jetorigin_llp_pt", &jetorigin_llp_pt);
+
+                tree_->SetBranchAddress("jetorigin_isPrompt_E",&jetorigin_isPrompt_E);
+                tree_->SetBranchAddress("jetorigin_isPrompt_MU",&jetorigin_isPrompt_MU);
+                tree_->SetBranchAddress("jetorigin_isPrompt_TAU",&jetorigin_isPrompt_TAU);
 
                 tree_->SetBranchAddress("jetorigin_isUndefined",&jetorigin_isUndefined);
                 tree_->SetBranchAddress("jetorigin_isB",&jetorigin_isB);
@@ -1020,6 +1052,9 @@ class NanoXTree
             tree_->SetBranchAddress("electron_jetIdx",&electron_jetIdx);
             electronBranches = branchAddresses<maxEntries_electron>(tree_,electronFeatures);
 
+            symbolTable_.add_variable("isPrompt_E",isPrompt_E);
+            symbolTable_.add_variable("isPrompt_MU",isPrompt_MU);
+            symbolTable_.add_variable("isPrompt_TAU",isPrompt_TAU);
 
             symbolTable_.add_variable("isB",isB);
             symbolTable_.add_variable("isBB",isBB);
@@ -1063,6 +1098,7 @@ class NanoXTree
             symbolTable_.add_variable("isLLP_QTAU",isLLP_QTAU);
             symbolTable_.add_variable("isLLP_QQTAU",isLLP_QQTAU);
 
+            symbolTable_.add_variable("isPrompt_ANY",isPrompt_ANY);
             symbolTable_.add_variable("isB_ANY",isB_ANY);
             symbolTable_.add_variable("isC_ANY",isC_ANY);
             symbolTable_.add_variable("isLLP_ANY",isLLP_ANY);
@@ -1239,24 +1275,46 @@ class NanoXTree
             if (Jet_nConstituents[jet]<4) return false;
 
 
-            /*
-            float leptonPtSum = 0.;
-            if (Jet_muonIdx1[jet]>=0 and nMuon>Jet_muonIdx1[jet]) leptonPtSum+=Muon_pt[Jet_muonIdx1[jet]];
-            if (Jet_muonIdx2[jet]>=0 and nMuon>Jet_muonIdx2[jet]) leptonPtSum+=Muon_pt[Jet_muonIdx2[jet]];
-            if (Jet_electronIdx1[jet]>=0 and nElectron>Jet_electronIdx1[jet]) leptonPtSum+=Electron_pt[Jet_electronIdx1[jet]];
-            if (Jet_electronIdx2[jet]>=0 and nElectron>Jet_electronIdx2[jet]) leptonPtSum+=Electron_pt[Jet_electronIdx2[jet]];
 
-            if ((leptonPtSum/Jet_pt[jet])>0.6)
+            TLorentzVector jetP4(0,0,0,0);
+            jetP4.SetPtEtaPhiM(Jet_pt[jet],Jet_eta[jet],Jet_phi[jet],0.);
+
+            TLorentzVector leptonP4Sum(0,0,0,0);
+
+            for (int imu = 0; imu < nMuon; ++imu)
             {
-                return false;
+                TLorentzVector leptonP4(0,0,0,0);
+                leptonP4.SetPtEtaPhiM(Muon_pt[imu],Muon_eta[imu],Muon_phi[imu],0.);
+                if (leptonP4.DeltaR(jetP4)<0.4)
+                {
+                    leptonP4Sum+=leptonP4;
+                }
             }
-            */
+
+            for (int iele = 0; iele < nElectron; ++iele)
+            {
+                TLorentzVector leptonP4(0,0,0,0);
+                leptonP4.SetPtEtaPhiM(Electron_pt[iele],Electron_eta[iele],Electron_phi[iele],0.);
+                if (leptonP4.DeltaR(jetP4)<0.4)
+                {
+                    leptonP4Sum+=leptonP4;
+                }
+            }
+
+            TLorentzVector jetP4Subtracted = jetP4 - leptonP4Sum;
+            if (jetP4Subtracted.Pt()<10.) return false;
+
+
             if (addTruth_)
             {
                 if (jetorigin_isUndefined[indexOrigin]>0.5)
                 {
                     return false;
                 }
+
+                isPrompt_E = jetorigin_isPrompt_E[indexOrigin];
+                isPrompt_MU = jetorigin_isPrompt_MU[indexOrigin];
+                isPrompt_TAU = jetorigin_isPrompt_TAU[indexOrigin];
 
                 isB = jetorigin_isB[indexOrigin];
                 isBB = jetorigin_isBB[indexOrigin];
@@ -1301,6 +1359,7 @@ class NanoXTree
 
                 isPU = jetorigin_isPU[indexOrigin];
 
+                isPrompt_ANY = isPrompt_E+isPrompt_MU+isPrompt_TAU;
                 isB_ANY = isB+isBB+isGBB+isLeptonic_B+isLeptonic_C;
                 isC_ANY = isC+isCC+isGCC;
                 isLLP_ANY = isLLP_RAD+isLLP_Q+isLLP_QQ+isLLP_B+isLLP_BB
@@ -1311,11 +1370,13 @@ class NanoXTree
                             +isLLP_TAU+isLLP_QTAU+isLLP_QQTAU;
 
 
-                if ((isB_ANY+isC_ANY+
+                if ((isPrompt_ANY
+                    +isB_ANY+isC_ANY
                     +isS+isUD+isG+isPU
                     +isLLP_ANY+jetorigin_isUndefined[indexOrigin])!=1)
                 {
                     std::cout<<"Error - label sum is not 1"<<std::endl;
+                    std::cout<<"  isPrompt_E: "<<isPrompt_E<<", isPrompt_MU: "<<isPrompt_MU<<", isPrompt_TAU: "<<isPrompt_TAU<<std::endl;
                     std::cout<<"  isB: "<<isB<<", isBB: "<<isBB<<", isGBB: "<<isGBB<<", isLeptonic_B: "<<isLeptonic_B<<", isLeptonic_C: "<<isLeptonic_C<<std::endl;
                     std::cout<<"  isC: "<<isC<<", isCC: "<<isCC<<", isGCC: "<<isGCC<<", isS: "<<isS<<", isUD: "<<isUD<<", isG: "<<isG<<", isPU: "<<isPU<<std::endl;
                     std::cout<<"  isLLP_RAD: "<<isLLP_RAD<<", isLLP_Q: "<<isLLP_Q<<", isLLP_QQ: "<<isLLP_QQ<<", isLL_B: "<<isLLP_B<<", isLLP_BB: "<<isLLP_BB<<std::endl;
@@ -1336,6 +1397,11 @@ class NanoXTree
                 {
                     return false;
                 }
+
+                isPrompt_E = 0;
+                isPrompt_MU = 0;
+                isPrompt_TAU = 0;
+
                 isB = 0;
                 isBB = 0;
                 isGBB = 0;
@@ -1402,6 +1468,18 @@ class NanoXTree
             return true;
         }
 
+        float getJetPt(unsigned int jet)
+        {
+            int indexGlobal = -1;
+            for (int ijet = 0; ijet < nJet; ++ijet)
+            {
+                if (global_jetIdx[ijet]==jet) indexGlobal = ijet;
+            }
+            if (indexGlobal<0) return -1;
+
+            return global_pt[indexGlobal];
+        }
+
         int getJetClass(unsigned int jet)
         {
             if (not addTruth_) return 0; //default class
@@ -1412,46 +1490,49 @@ class NanoXTree
                 if (jetorigin_jetIdx[ijet]==jet) indexOrigin = ijet;
             }
 
+            if (indexOrigin==-1) return -1;
 
-            if (indexOrigin==-1) return 0;
+            if  (jetorigin_isPrompt_E[indexOrigin]>0.5) return 0;
+            if  (jetorigin_isPrompt_MU[indexOrigin]>0.5) return 1;
+            if  (jetorigin_isPrompt_TAU[indexOrigin]>0.5) return 2;
 
-            if  (jetorigin_isB[indexOrigin]>0.5) return 0;
-            if  (jetorigin_isBB[indexOrigin]>0.5) return 1;
-            if  (jetorigin_isGBB[indexOrigin]>0.5) return 2;
-            if  (jetorigin_isLeptonic_B[indexOrigin]>0.5) return 3;
-            if  (jetorigin_isLeptonic_C[indexOrigin]>0.5) return 4;
-            if  (jetorigin_isC[indexOrigin]>0.5) return 5;
-            if  (jetorigin_isCC[indexOrigin]>0.5) return 6;
-            if  (jetorigin_isGCC[indexOrigin]>0.5) return 7;
-            if  (jetorigin_isS[indexOrigin]>0.5) return 8;
-            if  (jetorigin_isUD[indexOrigin]>0.5) return 9;
-            if  (jetorigin_isG[indexOrigin]>0.5) return 10;
-            if  (jetorigin_isPU[indexOrigin]>0.5) return 11;
+            if  (jetorigin_isB[indexOrigin]>0.5) return 3;
+            if  (jetorigin_isBB[indexOrigin]>0.5) return 4;
+            if  (jetorigin_isGBB[indexOrigin]>0.5) return 5;
+            if  (jetorigin_isLeptonic_B[indexOrigin]>0.5) return 6;
+            if  (jetorigin_isLeptonic_C[indexOrigin]>0.5) return 7;
+            if  (jetorigin_isC[indexOrigin]>0.5) return 8;
+            if  (jetorigin_isCC[indexOrigin]>0.5) return 9;
+            if  (jetorigin_isGCC[indexOrigin]>0.5) return 10;
+            if  (jetorigin_isS[indexOrigin]>0.5) return 11;
+            if  (jetorigin_isUD[indexOrigin]>0.5) return 12;
+            if  (jetorigin_isG[indexOrigin]>0.5) return 13;
+            if  (jetorigin_isPU[indexOrigin]>0.5) return 14;
 
-            if  (jetorigin_isLLP_RAD[indexOrigin]>0.5) return 12;
-            if  (jetorigin_isLLP_Q[indexOrigin]>0.5) return 13;
-            if  (jetorigin_isLLP_QQ[indexOrigin]>0.5) return 14;
+            if  (jetorigin_isLLP_RAD[indexOrigin]>0.5) return 15;
+            if  (jetorigin_isLLP_Q[indexOrigin]>0.5) return 16;
+            if  (jetorigin_isLLP_QQ[indexOrigin]>0.5) return 17;
 
-            if  (jetorigin_isLLP_B[indexOrigin]>0.5) return 15;
-            if  (jetorigin_isLLP_BB[indexOrigin]>0.5) return 16;
+            if  (jetorigin_isLLP_B[indexOrigin]>0.5) return 18;
+            if  (jetorigin_isLLP_BB[indexOrigin]>0.5) return 19;
 
-            if  (jetorigin_isLLP_MU[indexOrigin]>0.5) return 17;
-            if  (jetorigin_isLLP_QMU[indexOrigin]>0.5) return 18;
-            if  (jetorigin_isLLP_QQMU[indexOrigin]>0.5) return 19;
+            if  (jetorigin_isLLP_MU[indexOrigin]>0.5) return 20;
+            if  (jetorigin_isLLP_QMU[indexOrigin]>0.5) return 21;
+            if  (jetorigin_isLLP_QQMU[indexOrigin]>0.5) return 22;
 
-            if  (jetorigin_isLLP_BMU[indexOrigin]>0.5) return 20;
-            if  (jetorigin_isLLP_BBMU[indexOrigin]>0.5) return 21;
+            if  (jetorigin_isLLP_BMU[indexOrigin]>0.5) return 23;
+            if  (jetorigin_isLLP_BBMU[indexOrigin]>0.5) return 24;
 
-            if  (jetorigin_isLLP_E[indexOrigin]>0.5) return 22;
-            if  (jetorigin_isLLP_QE[indexOrigin]>0.5) return 23;
-            if  (jetorigin_isLLP_QQE[indexOrigin]>0.5) return 24;
+            if  (jetorigin_isLLP_E[indexOrigin]>0.5) return 25;
+            if  (jetorigin_isLLP_QE[indexOrigin]>0.5) return 26;
+            if  (jetorigin_isLLP_QQE[indexOrigin]>0.5) return 27;
 
-            if  (jetorigin_isLLP_BE[indexOrigin]>0.5) return 25;
-            if  (jetorigin_isLLP_BBE[indexOrigin]>0.5) return 26;
+            if  (jetorigin_isLLP_BE[indexOrigin]>0.5) return 28;
+            if  (jetorigin_isLLP_BBE[indexOrigin]>0.5) return 29;
 
-            if  (jetorigin_isLLP_TAU[indexOrigin]>0.5) return 27;
-            if  (jetorigin_isLLP_QTAU[indexOrigin]>0.5) return 28;
-            if  (jetorigin_isLLP_QQTAU[indexOrigin]>0.5) return 29;
+            if  (jetorigin_isLLP_TAU[indexOrigin]>0.5) return 30;
+            if  (jetorigin_isLLP_QTAU[indexOrigin]>0.5) return 31;
+            if  (jetorigin_isLLP_QQTAU[indexOrigin]>0.5) return 32;
 
             return -1;
         }
@@ -1496,6 +1577,10 @@ class NanoXTree
                 unpackedTree.jetorigin_llpId = jetorigin_llpId[indexOrigin];
                 unpackedTree.jetorigin_llp_mass = jetorigin_llp_mass[indexOrigin];
                 unpackedTree.jetorigin_llp_pt = jetorigin_llp_pt[indexOrigin];
+
+                unpackedTree.jetorigin_isPrompt_E = jetorigin_isPrompt_E[indexOrigin];
+                unpackedTree.jetorigin_isPrompt_MU = jetorigin_isPrompt_MU[indexOrigin];
+                unpackedTree.jetorigin_isPrompt_TAU = jetorigin_isPrompt_TAU[indexOrigin];
 
                 unpackedTree.jetorigin_isUndefined = jetorigin_isUndefined[indexOrigin];
                 unpackedTree.jetorigin_isB = jetorigin_isB[indexOrigin];
@@ -1884,11 +1969,35 @@ int main(int argc, char **argv)
 
     std::cout<<"Number of independent inputs: "<<trees.size()<<std::endl;
     std::cout<<"Total number of events: "<<total_entries<<std::endl;
+
+    constexpr int nClasses = 33;
+
     std::vector<std::unique_ptr<UnpackedTree>> unpackedTreesTrain;
-    std::vector<std::vector<int>> eventsPerClassPerFileTrain(30,std::vector<int>(nOutputs,0));
+    std::vector<std::vector<int>> eventsPerClassPerFileTrain(nClasses,std::vector<int>(nOutputs,0));
 
     std::vector<std::unique_ptr<UnpackedTree>> unpackedTreesTest;
-    std::vector<std::vector<int>> eventsPerClassPerFileTest(30,std::vector<int>(nOutputs,0));
+    std::vector<std::vector<int>> eventsPerClassPerFileTest(nClasses,std::vector<int>(nOutputs,0));
+
+    std::array<float,21> ptBins{{
+          10.        ,    15.        ,    20.        ,    25.        ,
+          31.05838232,    38.58492449,    47.93541347,    59.55185592,
+          73.98337237,    91.91215457,   114.18571346,   141.85694176,
+         176.23388528,   218.94157546,   271.99884626,   337.9137663 ,
+         419.8021978 ,   521.53508632,   647.92144416,   804.93567703,
+        1000.
+	}};
+	std::array<float,nClasses+1> classBins;
+	for (size_t i = 0; i < (nClasses+1); ++i)
+	{
+	    classBins[i] = i-0.5;
+	}
+    TH2F ptSample(
+        "ptSample","",
+        ptBins.size()-1,ptBins.data(),
+        classBins.size()-1,classBins.data()
+    );
+
+    TRandom3 rng(1234);
 
     for (unsigned int i = 0; i < nOutputs; ++i)
     {
@@ -1944,6 +2053,21 @@ int main(int argc, char **argv)
             if (trees[ifile]->isSelected(j))
             {
                 int jet_class = trees[ifile]->getJetClass(j);
+                float jet_pt = trees[ifile]->getJetPt(j);
+                float binContent = ptSample.GetBinContent(
+                    ptSample.GetXaxis()->FindBin(jet_pt),
+                    ptSample.GetYaxis()->FindBin(jet_class)
+                );
+                if (ptSample.GetEntries()>10 and ptSample.GetMaximum()<rng.Gaus(binContent+1,1))
+                {
+                    skippedJets[ifile]+=1;
+                    continue;
+                }
+
+                if (jet_class>eventsPerClassPerFileTrain.size())
+                {
+                    throw std::runtime_error("Number of classes do not match");
+                }
                 long hashTest = calcHash(97*trees[ifile]->entry()+79*j)%100;
                 if (hashTest<nTestFrac)
                 {
@@ -1961,6 +2085,7 @@ int main(int argc, char **argv)
                         {
                             eventsPerClassPerFileTest[jet_class][ofile]+=1;
                             writtenJets[ifile]+=1;
+                            ptSample.Fill(jet_pt,jet_class);
                         }
                         else
                         {
@@ -1984,6 +2109,7 @@ int main(int argc, char **argv)
                         {
                             eventsPerClassPerFileTrain[jet_class][ofile]+=1;
                             writtenJets[ifile]+=1;
+                            ptSample.Fill(jet_pt,jet_class);
                         }
                         else
                         {
@@ -2005,6 +2131,23 @@ int main(int argc, char **argv)
         std::cout<<"infile "<<inputs[i]<<":"<<std::endl;
         std::cout<<"\tevents: found = "<<entries[i]<<", read = "<<readEvents[i]<<"/"<<int(1.*entries[i]/nSplit)<<std::endl;
         std::cout<<"\tjets: written = "<<writtenJets[i]<<", skipped = "<<skippedJets[i]<<std::endl;
+    }
+
+    std::cout<<"----- Sample ----- "<<std::endl;
+    std::cout<<"    ";
+    for (int ibin = 0; ibin < ptSample.GetNbinsX(); ++ibin)
+    {
+        printf("%7.1f ",ptSample.GetXaxis()->GetBinCenter(ibin+1));
+    }
+    std::cout<<std::endl;
+    for (int c = 0; c < ptSample.GetNbinsY(); ++c)
+    {
+        printf("%2i: ",c+1);
+        for (int ibin = 0; ibin < ptSample.GetNbinsX(); ++ibin)
+        {
+            printf("%5.0f   ",ptSample.GetBinContent(ibin+1,c+1));
+        }
+        std::cout<<std::endl;
     }
     std::cout<<"----- Train ----- "<<std::endl;
     for (size_t c = 0; c < eventsPerClassPerFileTrain.size(); ++c)
