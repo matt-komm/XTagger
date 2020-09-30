@@ -140,11 +140,11 @@ class AttentionNetwork(xtools.NominalNetwork):
                 kernel_regularizer=keras.regularizers.l1(1e-6),
                 name="class_nclasses"
             ),
-            keras.layers.Softmax(name="class_softmax")
+            #keras.layers.Softmax(name="class_softmax")
         ])
         
     def returnsLogits(self):
-        return False
+        return True
         
     def applyAttention(self,features,attention):
         result = keras.layers.Lambda(lambda x: tf.matmul(tf.transpose(x[0],[0,2,1]),x[1]))([attention,features])
@@ -166,9 +166,6 @@ class AttentionNetwork(xtools.NominalNetwork):
         
         cpf_tensor = self.applyAttention(cpf_conv,cpf_attention)
         npf_tensor = self.applyAttention(npf_conv,npf_attention)
-        
-        
-        
         
         full_features = self.applyLayers([globalvars_preproc,cpf_tensor,npf_tensor,sv_conv,muon_conv,electron_conv,gen], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,muon_conv,gen], self.full_features)

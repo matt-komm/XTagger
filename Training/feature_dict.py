@@ -3,7 +3,7 @@ import tensorflow as tf
 featureDict = {
     "truth": {
         "names":[
-            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_E","LLP_MU","LLP_TAU","LLP_QE","LLP_QMU","LLP_QTAU",
+            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU",
         ],
         "weights":[
             "jetorigin_isPrompt_E",
@@ -16,15 +16,18 @@ featureDict = {
             "jetorigin_isG",
             "(jetorigin_isPU)*(global_pt<50.)",
             
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+                 
+            #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+        
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",
             
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
+            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
+            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+        
         ],
         "branches":[
             "jetorigin_isPrompt_E",
@@ -36,14 +39,11 @@ featureDict = {
             "jetorigin_isG",
             "jetorigin_isPU",
             
-            "jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD",
-            "jetorigin_isLLP_E",
-            "jetorigin_isLLP_MU",
-            "jetorigin_isLLP_TAU",
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",
             
-            "jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
-            "jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
-            "jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
+            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
+            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
         ],
     },
     

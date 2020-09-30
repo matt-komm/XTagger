@@ -135,7 +135,7 @@ resampleWeights = xtools.ResampleWeights(
             +'||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU' \
             +'||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE' \
             +'||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU',
-    ptBinning=np.array([10., 15., 20., 25., 30., 35., 40., 50., 60., 75., 120.]),
+    ptBinning=np.concatenate([[10.],np.logspace(1.2,2.1,22)]),#np.array([10., 12.5, 15., 17.5, 20., 22.5, 25.,27.5 30.,3 35., 40., 50., 60., 70., 80., 100., 120.]),
     etaBinning=np.linspace(-2.4,2.4,6)
 )
 

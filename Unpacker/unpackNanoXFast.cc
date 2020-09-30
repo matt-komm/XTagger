@@ -702,13 +702,13 @@ class NanoXTree
         int Jet_electronIdx2[maxEntries_global];
 
         unsigned int nMuon;
-        float Muon_pt[20];
-        float Muon_eta[20];
-        float Muon_phi[20];
+        float Muon_pt[50];
+        float Muon_eta[50];
+        float Muon_phi[50];
         unsigned int nElectron;
-        float Electron_pt[20];
-        float Electron_eta[20];
-        float Electron_phi[20];
+        float Electron_pt[50];
+        float Electron_eta[50];
+        float Electron_phi[50];
 
         float Jet_forDA[maxEntries_global];
         int Jet_genJetIdx[maxEntries_global];
@@ -1051,6 +1051,9 @@ class NanoXTree
             tree_->SetBranchAddress("nelectron",&nelectron);
             tree_->SetBranchAddress("electron_jetIdx",&electron_jetIdx);
             electronBranches = branchAddresses<maxEntries_electron>(tree_,electronFeatures);
+            
+            tree_->SetCacheSize(10);
+            tree_->SetMaxVirtualSize(16000);
 
             symbolTable_.add_variable("isPrompt_E",isPrompt_E);
             symbolTable_.add_variable("isPrompt_MU",isPrompt_MU);
@@ -1275,35 +1278,40 @@ class NanoXTree
             if (Jet_nConstituents[jet]<4) return false;
 
 
-
-            TLorentzVector jetP4(0,0,0,0);
-            jetP4.SetPtEtaPhiM(Jet_pt[jet],Jet_eta[jet],Jet_phi[jet],0.);
-
-            TLorentzVector leptonP4Sum(0,0,0,0);
-
-            for (int imu = 0; imu < nMuon; ++imu)
+            if (jetorigin_isPrompt_E[indexOrigin]<0.5 and jetorigin_isPrompt_MU[indexOrigin]<0.5 and jetorigin_isPrompt_TAU[indexOrigin]<0.5)
             {
-                TLorentzVector leptonP4(0,0,0,0);
-                leptonP4.SetPtEtaPhiM(Muon_pt[imu],Muon_eta[imu],Muon_phi[imu],0.);
-                if (leptonP4.DeltaR(jetP4)<0.4)
+                TLorentzVector jetP4(0,0,0,0);
+                jetP4.SetPtEtaPhiM(Jet_pt[jet],Jet_eta[jet],Jet_phi[jet],0.);
+
+                TLorentzVector leptonP4Sum(0,0,0,0);
+
+                for (int imu = 0; imu < nMuon; ++imu)
                 {
-                    leptonP4Sum+=leptonP4;
+                    TLorentzVector leptonP4(0,0,0,0);
+                    leptonP4.SetPtEtaPhiM(Muon_pt[imu],Muon_eta[imu],Muon_phi[imu],0.);
+                    if (leptonP4.DeltaR(jetP4)<0.4)
+                    {
+                        leptonP4Sum+=leptonP4;
+                    }
+                }
+
+                for (int iele = 0; iele < nElectron; ++iele)
+                {
+                    TLorentzVector leptonP4(0,0,0,0);
+                    leptonP4.SetPtEtaPhiM(Electron_pt[iele],Electron_eta[iele],Electron_phi[iele],0.);
+                    if (leptonP4.DeltaR(jetP4)<0.4)
+                    {
+                        leptonP4Sum+=leptonP4;
+                    }
+                }
+
+                TLorentzVector jetP4Subtracted = jetP4 - leptonP4Sum;
+            
+                if (jetP4Subtracted.Pt()<10.) 
+                {
+                    return false;
                 }
             }
-
-            for (int iele = 0; iele < nElectron; ++iele)
-            {
-                TLorentzVector leptonP4(0,0,0,0);
-                leptonP4.SetPtEtaPhiM(Electron_pt[iele],Electron_eta[iele],Electron_phi[iele],0.);
-                if (leptonP4.DeltaR(jetP4)<0.4)
-                {
-                    leptonP4Sum+=leptonP4;
-                }
-            }
-
-            TLorentzVector jetP4Subtracted = jetP4 - leptonP4Sum;
-            if (jetP4Subtracted.Pt()<10.) return false;
-
 
             if (addTruth_)
             {
@@ -1900,6 +1908,8 @@ int main(int argc, char **argv)
                     }
                 }
             }
+            auto rng = std::default_random_engine {123456};
+            std::shuffle(files.begin(), files.end(), rng);
             selectors.push_back(select);
             setters.push_back(setter);
             caps.push_back(cap);
