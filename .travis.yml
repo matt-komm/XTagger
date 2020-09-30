@@ -6,8 +6,8 @@ jobs:
   include:
     - stage: EnvCPU, Unpacker and Training check
       script:
-        - Tests/Env/testSetupEnv.sh
-        - Tests/Ops/buildOps.sh
+        - travis_wait 45 Tests/Env/testSetupEnv.sh
+        - travis_wait 10 Tests/Ops/buildOps.sh
 notifications:
   email:
     recipients:
