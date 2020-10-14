@@ -164,11 +164,11 @@ pipelineTest = xtools.Pipeline(
 perfPipelines = []
 for perfInputs in perfInputList:
     perfPipelines.append(xtools.Pipeline(
-        perfInputList[0].getFileList(),
+        perfInputs.getFileList(),
         featureDict,
         resampleWeights.getLabelNameList(),
         os.path.join(outputFolder,"weights.root"),
-        batchSize=min(args.batchSize,max(100,int(round(perfInputs.nJets()/100.)))),
+        batchSize=min(args.batchSize,max(250,int(round(perfInputs.nJets()/100.)))),
         resample=False,
         maxThreads=1
     ))
@@ -200,6 +200,7 @@ for epoch in range(args.resume, args.nepochs):
 
     #TODO: keras might be wrong here: ytrue <-> ypredicted needs to be swapped
     def logit_loss(ytrue,ypredicted):
+        #tf.print(ytrue)
         return tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
             labels=ytrue,
             logits=ypredicted,
@@ -252,11 +253,18 @@ for epoch in range(args.resume, args.nepochs):
             step += 1
             train_batch_value = sess.run(train_batch)
 
+            badValue = False
             for k,elem in train_batch_value.iteritems():
                 if not np.isfinite(elem).all():
-                    raise Exception("Found non finite training value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
-                if np.any(elem>1e8) or np.any(elem<-1e8):
-                    raise Exception("Found large training value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    logging.error("Found non finite training value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+                    badValue = True
+                if np.any(elem>1e7) or np.any(elem<-1e7):
+                    logging.error("Found large training value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    badValue = True
+                #TODO: learn clipping and put into model
+                train_batch_value[k] = np.clip(np.nan_to_num(train_batch_value[k]),-1e6,1e6)
+            if badValue:
+                continue
 
             if epoch==0:
                 #featurePlotter.fill(train_batch_value)
@@ -269,17 +277,18 @@ for epoch in range(args.resume, args.nepochs):
                 )
             #print train_batch_value
             train_inputs_class = [
-                np.nan_to_num(train_batch_value['gen']),
-                np.nan_to_num(train_batch_value['globalvars']),
-                np.nan_to_num(train_batch_value['cpf']),
-                np.nan_to_num(train_batch_value['npf']),
-                np.nan_to_num(train_batch_value['sv']),
-                np.nan_to_num(train_batch_value['muon']),
-                np.nan_to_num(train_batch_value['electron']),
+                train_batch_value['gen'],
+                train_batch_value['globalvars'],
+                train_batch_value['cpf'],
+                train_batch_value['npf'],
+                train_batch_value['sv'],
+                train_batch_value['muon'],
+                train_batch_value['electron'],
             ]
 
 
-            train_outputs = modelClass.train_on_batch(train_inputs_class,np.nan_to_num(train_batch_value['truth']))
+
+            train_outputs = modelClass.train_on_batch(train_inputs_class,train_batch_value['truth'])
             train_loss+=train_outputs[0]
             if step%10==0:
                 logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
@@ -298,6 +307,9 @@ for epoch in range(args.resume, args.nepochs):
     modelClass.save_weights(os.path.join(outputFolder,'weight_%i.hdf5'%epoch))
 
 
+    if epoch%5==0:
+        testMonitor = xtools.PerformanceMonitor(featureDict)
+
     test_loss = 0
     time_test = time.time()
     try:
@@ -306,23 +318,36 @@ for epoch in range(args.resume, args.nepochs):
             step += 1
             test_batch_value = sess.run(test_batch)
 
+            badValue = False
             for k,elem in test_batch_value.iteritems():
                 if not np.isfinite(elem).all():
-                    raise Exception("Found non finite testing value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
-                if np.any(elem>1e8) or np.any(elem<-1e8):
-                    raise Exception("Found large testing value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
-
+                    logging.error("Found non finite testing value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+                    badValue = True
+                if np.any(elem>1e7) or np.any(elem<-1e7):
+                    logging.error("Found large testing value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    badValue = True
+                test_batch_value[k] = np.clip(np.nan_to_num(test_batch_value[k]),-1e6,1e6)
+                
+            if badValue:
+                continue
+                
             #print train_batch_value
             test_inputs_class = [
-                np.nan_to_num(test_batch_value['gen']),
-                np.nan_to_num(test_batch_value['globalvars']),
-                np.nan_to_num(test_batch_value['cpf']),
-                np.nan_to_num(test_batch_value['npf']),
-                np.nan_to_num(test_batch_value['sv']),
-                np.nan_to_num(test_batch_value['muon']),
-                np.nan_to_num(test_batch_value['electron']),
+                test_batch_value['gen'],
+                test_batch_value['globalvars'],
+                test_batch_value['cpf'],
+                test_batch_value['npf'],
+                test_batch_value['sv'],
+                test_batch_value['muon'],
+                test_batch_value['electron']
             ]
-            test_outputs = modelClass.test_on_batch(test_inputs_class,np.nan_to_num(test_batch_value['truth']))
+            
+            test_outputs = modelClass.test_on_batch(test_inputs_class,test_batch_value['truth'])
+            test_batch_prediction = modelClass.predict_on_batch(test_inputs_class)
+            
+            if epoch%5==0:
+                testMonitor.analyze_batch(test_batch_value,test_batch_prediction)
+                
             test_loss+=test_outputs[0]
             if step%10==0:
                 logging.info("Testing step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,test_outputs[0],100.*test_outputs[1]))
@@ -330,13 +355,19 @@ for epoch in range(args.resume, args.nepochs):
 
     except tf.errors.OutOfRangeError:
         pass
-
+        
     test_loss = test_loss/step
     time_test = (time.time()-time_test)/step
     logging.info('Done testing for %i steps of epoch %i: loss=%.4f, %.1fms/step'%(step,epoch,test_loss,time_test*1000.))
 
     logging.info("Epoch duration: %.1fmin"%((time.time() - start_time_epoch)/60.))
 
+        
+    if epoch%5==0:
+        testMonitor.save(os.path.join(outputFolder,'test_%i.hdf5'%(epoch)))
+        testMonitor.plot(featureDict['truth']['names'],os.path.join(outputFolder,'test_%i'%(epoch)))
+            
+    
     f = open(os.path.join(outputFolder, "model_epoch.stat"), "a")
     f.write("%i;%.3e;%.3e;%.3e\n"%(
         epoch,
@@ -354,10 +385,15 @@ for epoch in range(args.resume, args.nepochs):
                 while not coord.should_stop():
                     step += 1
                     perf_batch_value = sess.run(perf_batch)
-                    #TODO: read this value from the file
-                    gen_dxy = np.ones(perf_batch_value['gen'].shape)*(-0.4)
+                    
+                    selectSignal = np.sum(perf_batch_value['truth'][:,8:],axis=1)>0.5
+                    meanParameter = np.mean(perf_batch_value['gen'][selectSignal])
+                    stdParameter = np.std(perf_batch_value['gen'][selectSignal])
+                    #print meanParameter,stdParameter
+                    
+                    perf_batch_value['gen'] = np.random.normal(meanParameter,stdParameter,size=perf_batch_value['gen'].shape)
                     perf_inputs_class = [
-                        gen_dxy,
+                        perf_batch_value['gen'],
                         perf_batch_value['globalvars'],
                         perf_batch_value['cpf'],
                         perf_batch_value['npf'],
@@ -375,9 +411,10 @@ for epoch in range(args.resume, args.nepochs):
             except tf.errors.OutOfRangeError:
                 pass
 
-            auc = perfMonitor.auc()
-            logging.info("Done perf %i for %i steps of epoch %i: auc=%.2f%%"%(iperf,step,epoch,100.*auc))
-
+            #auc = perfMonitor.auc()
+            #logging.info("Done perf %i for %i steps of epoch %i: auc=%.2f%%"%(iperf,step,epoch,100.*auc))
+            
             perfMonitor.save(os.path.join(outputFolder,'perf_%i_%i.hdf5'%(iperf,epoch)))
-            perfMonitor.plot(os.path.join(outputFolder,'roc_%i_%i.ps'%(iperf,epoch)))
+            perfMonitor.plot(featureDict['truth']['names'],os.path.join(outputFolder,'perf_%i_%i'%(iperf,epoch)))
     resetSession()
+    

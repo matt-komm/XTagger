@@ -16,7 +16,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             #"#cap 2000000",
-            "#cap 5000000",
+            "#cap 10000000",
             "#select ((isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (isG<0.5)",
             "#select ((isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (isUD<0.5)",
             "#select ((isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (isPU<0.5)",
@@ -29,7 +29,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             #"#cap 3000000",
-            "#cap 5000000",
+            "#cap 10000000",
             "#select ((isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (isG<0.5)",
             "#select ((isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (isUD<0.5)",
             "#select ((isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (isPU<0.5)",
@@ -54,6 +54,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e04.txt"
@@ -63,6 +64,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e03.txt"
@@ -72,6 +74,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e02.txt"
@@ -81,6 +84,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e01.txt"
@@ -90,6 +94,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e00.txt"
@@ -99,6 +104,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-01.txt"
@@ -108,6 +114,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-02.txt"
@@ -117,6 +124,7 @@ configs = [
         "maxFiles":-1,
         "trainFraction": 1,
         "header":[
+            "#select (dxy>-1.3)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNLGun.txt"

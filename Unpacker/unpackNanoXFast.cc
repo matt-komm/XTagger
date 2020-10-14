@@ -75,6 +75,11 @@ class BranchData
         template<class TYPE, size_t N> static std::shared_ptr<BranchData> makeBranch(TTree* tree, const std::string& branchName, const std::string& branchType, long bufferSize);
         template<class TYPE, size_t N> static std::shared_ptr<BranchData> branchAddress(TTree* tree, const std::string& branchName);
 
+        virtual float mean() const = 0;
+        virtual float std() const = 0;
+        virtual float min() const = 0;
+        virtual float max() const = 0;
+
         template<size_t N> static std::shared_ptr<BranchData> makeBranch(Feature::Type type, TTree* tree, const std::string& branchName, const std::string& branchType, long bufferSize)
         {
             switch (type)
@@ -108,14 +113,53 @@ class BranchDataTmpl:
 {
     protected:
         TYPE buffer_[N];
+        float mean_;
+        float mean2_;
+        float max_;
+        float min_;
+        int n_;
     public:
+        BranchDataTmpl():
+            mean_(0),
+            mean2_(0),
+            max_(-1e32),
+            min_(1e32),
+            n_(0)
+        {
+        }
+
+        virtual float mean() const
+        {
+            return mean_/n_;
+        }
+
+        virtual float std() const
+        {
+            return std::sqrt(mean2_/n_-mean_*mean_/n_/n_);
+        }
+
+        virtual float min() const
+        {
+            return min_;
+        }
+
+        virtual float max() const
+        {
+            return max_;
+        }
 
         virtual void setFloat(size_t index, float value)
         {
             buffer_[index] = TYPE(value);
         }
+
         virtual float getFloat(size_t index)
         {
+            n_+=1;
+            mean_+=buffer_[index];
+            mean2_+=buffer_[index]*buffer_[index];
+            min_ = std::min<float>(min_,buffer_[index]);
+            max_ = std::max<float>(max_,buffer_[index]);
             return buffer_[index];
         }
 
@@ -132,14 +176,54 @@ class BranchDataTmpl<TYPE,0>:
 {
     protected:
         TYPE buffer_;
+        float mean_;
+        float mean2_;
+        float max_;
+        float min_;
+        int n_;
+
     public:
+        BranchDataTmpl():
+            mean_(0),
+            mean2_(0),
+            max_(-1e32),
+            min_(1e32),
+            n_(0)
+        {
+        }
+
+        virtual float mean() const
+        {
+            return mean_/n_;
+        }
+
+        virtual float std() const
+        {
+            return std::sqrt(mean2_/n_-mean_*mean_/n_/n_);
+        }
+
+        virtual float min() const
+        {
+            return min_;
+        }
+
+        virtual float max() const
+        {
+            return max_;
+        }
 
         virtual void setFloat(size_t index, float value)
         {
+
             buffer_ = TYPE(value);
         }
         virtual float getFloat(size_t index)
         {
+            n_+=1;
+            mean_+=buffer_;
+            mean2_+=buffer_*buffer_;
+            min_ = std::min<float>(min_,buffer_);
+            max_ = std::max<float>(max_,buffer_);
             return buffer_;
         }
 
@@ -878,6 +962,7 @@ class NanoXTree
         float phi;
 
         float ctau;
+        float dxy;
 
         Parser parser_;
         SymbolTable symbolTable_;
@@ -1051,7 +1136,7 @@ class NanoXTree
             tree_->SetBranchAddress("nelectron",&nelectron);
             tree_->SetBranchAddress("electron_jetIdx",&electron_jetIdx);
             electronBranches = branchAddresses<maxEntries_electron>(tree_,electronFeatures);
-            
+
             tree_->SetCacheSize(10);
             tree_->SetMaxVirtualSize(16000);
 
@@ -1108,6 +1193,7 @@ class NanoXTree
 
             symbolTable_.add_variable("rand",rand);
             symbolTable_.add_variable("ctau",ctau);
+            symbolTable_.add_variable("dxy",dxy);
 
             symbolTable_.add_variable("pt",pt);
             symbolTable_.add_variable("eta",eta);
@@ -1207,6 +1293,44 @@ class NanoXTree
             return std::min<int>(nJet,maxJets);
         }
 
+        void printInfo() const
+        {
+            for (size_t ifeature = 0; ifeature < globalBranches.size(); ++ifeature)
+            {
+                std::cout<<globalFeatures[ifeature].name()<<": "<<std::to_string(globalBranches[ifeature]->mean())<<" +- "<<std::to_string(globalBranches[ifeature]->std())<<" ["<<std::to_string(globalBranches[ifeature]->min())<<", "<<std::to_string(globalBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < csvBranches.size(); ++ifeature)
+            {
+                std::cout<<csvFeatures[ifeature].name()<<": "<<std::to_string(csvBranches[ifeature]->mean())<<" +- "<<std::to_string(csvBranches[ifeature]->std())<<" ["<<std::to_string(csvBranches[ifeature]->min())<<", "<<std::to_string(csvBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < cpfBranches.size(); ++ifeature)
+            {
+                std::cout<<cpfFeatures[ifeature].name()<<": "<<std::to_string(cpfBranches[ifeature]->mean())<<" +- "<<std::to_string(cpfBranches[ifeature]->std())<<" ["<<std::to_string(cpfBranches[ifeature]->min())<<", "<<std::to_string(cpfBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < npfBranches.size(); ++ifeature)
+            {
+                std::cout<<npfFeatures[ifeature].name()<<": "<<std::to_string(npfBranches[ifeature]->mean())<<" +- "<<std::to_string(npfBranches[ifeature]->std())<<" ["<<std::to_string(npfBranches[ifeature]->min())<<", "<<std::to_string(npfBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < svBranches.size(); ++ifeature)
+            {
+                std::cout<<svFeatures[ifeature].name()<<": "<<std::to_string(svBranches[ifeature]->mean())<<" +- "<<std::to_string(svBranches[ifeature]->std())<<" ["<<std::to_string(svBranches[ifeature]->min())<<", "<<std::to_string(svBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < muonBranches.size(); ++ifeature)
+            {
+                std::cout<<muonFeatures[ifeature].name()<<": "<<std::to_string(muonBranches[ifeature]->mean())<<" +- "<<std::to_string(muonBranches[ifeature]->std())<<" ["<<std::to_string(muonBranches[ifeature]->min())<<", "<<std::to_string(muonBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+
+            for (size_t ifeature = 0; ifeature < electronBranches.size(); ++ifeature)
+            {
+                std::cout<<electronFeatures[ifeature].name()<<": "<<std::to_string(electronBranches[ifeature]->mean())<<" +- "<<std::to_string(electronBranches[ifeature]->std())<<" ["<<std::to_string(electronBranches[ifeature]->min())<<", "<<std::to_string(electronBranches[ifeature]->max())<<"]"<<std::endl;
+            }
+        }
+
         bool isSelected(unsigned int jet)
         {
 
@@ -1275,7 +1399,8 @@ class NanoXTree
                 return false;
             }
 
-            if (Jet_nConstituents[jet]<4) return false;
+            //not required anymore since prompt lepton classes are integrated
+            //if (Jet_nConstituents[jet]<4) return false;
 
 
             if (jetorigin_isPrompt_E[indexOrigin]<0.5 and jetorigin_isPrompt_MU[indexOrigin]<0.5 and jetorigin_isPrompt_TAU[indexOrigin]<0.5)
@@ -1306,8 +1431,8 @@ class NanoXTree
                 }
 
                 TLorentzVector jetP4Subtracted = jetP4 - leptonP4Sum;
-            
-                if (jetP4Subtracted.Pt()<10.) 
+
+                if (jetP4Subtracted.Pt()<10.)
                 {
                     return false;
                 }
@@ -1453,6 +1578,7 @@ class NanoXTree
 
             rand = uniform_dist_(randomGenerator_);
             ctau = -10;
+            dxy = jetorigin_displacement_xy[indexOrigin];
             pt = global_pt[indexGlobal];
             eta = global_eta[indexGlobal];
             phi = global_phi[indexGlobal];
@@ -1771,7 +1897,7 @@ class NanoXTree
                 {
                     unpackedTree.electronBranches[ifeature]->setFloat(i,electronBranches[ifeature]->getFloat(electron_offset+i));
                 }
-		    }
+            }
 
             unpackedTree.fill();
             return true;
@@ -1802,11 +1928,11 @@ int main(int argc, char **argv)
 {
     cli::Parser parser(argc, argv);
     parser.set_required<std::string>("o", "output", "Output prefix");
-	parser.set_optional<int>("n", "number", 10, "Number of output files");
-	parser.set_optional<int>("f", "testfraction", 15, "Fraction of events for testing in percent [0-100]");
-	parser.set_optional<int>("s", "split", 1, "Number of splits for batched processing");
-	parser.set_optional<int>("b", "batch", 0, "Current batch number (<number of splits)");
-	parser.set_optional<bool>("t", "truth", true, "Add truth from jetorigin (deactivate for DA)");
+  	parser.set_optional<int>("n", "number", 10, "Number of output files");
+  	parser.set_optional<int>("f", "testfraction", 15, "Fraction of events for testing in percent [0-100]");
+  	parser.set_optional<int>("s", "split", 1, "Number of splits for batched processing");
+  	parser.set_optional<int>("b", "batch", 0, "Current batch number (<number of splits)");
+  	parser.set_optional<bool>("t", "truth", true, "Add truth from jetorigin (deactivate for DA)");
     parser.set_required<std::vector<std::string>>("i", "input", "Input files");
     parser.run_and_exit_if_error();
 
@@ -2188,6 +2314,13 @@ int main(int argc, char **argv)
     for (auto& unpackedTree: unpackedTreesTest)
     {
         unpackedTree->close();
+    }
+
+    for (size_t i = 0; i < inputs.size(); ++i)
+    {
+        std::cout<<"============= "<<inputs[i]<<" =============="<<std::endl;
+        trees[i]->printInfo();
+
     }
 
     return 0;

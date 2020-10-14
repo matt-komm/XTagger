@@ -18,8 +18,13 @@ class InputFiles():
         
     def addFile(self,path):
         if os.path.exists(path):
-            self.fileList.append(path)
-            logging.debug("Adding file: '"+path+"'")
+            rootFile = ROOT.TFile(path)
+            if rootFile.IsZombie():
+                logging.error("Found zombie input '"+path+"' -> skip")
+            else:
+                self.fileList.append(path)
+                logging.debug("Adding file: '"+path+"'")
+            rootFile.Close()
         else:
             logging.warning("file '"+path+"' does not exists -> skip!")
         
