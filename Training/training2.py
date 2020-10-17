@@ -192,6 +192,7 @@ for epoch in range(args.resume, args.nepochs):
     Network = imp.load_source('Network', os.path.join(args.outputFolder,"Network.py")).network
 
     network = Network(featureDict)
+    modelClassTrain = network.makeClassModelWithAlt()
     modelClass = network.makeClassModel()
 
     learningRateDecay = 1./(1.+args.kappa*max(0,epoch-5)**1.5)
@@ -205,6 +206,13 @@ for epoch in range(args.resume, args.nepochs):
             labels=ytrue,
             logits=ypredicted,
         ))
+
+    modelClassTrain.compile(
+        optClass,
+        loss=logit_loss if network.returnsLogits() else keras.losses.categorical_crossentropy,
+        metrics=[keras.metrics.categorical_accuracy],
+        loss_weights=[1.]
+    )
 
     modelClass.compile(
         optClass,
@@ -223,7 +231,7 @@ for epoch in range(args.resume, args.nepochs):
         perf_batches.append(perfPipeline.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 8:],axis=1) > 0.5))
 
     if epoch==0:
-        distributions = resampleWeights.makeDistribution(np.linspace(-4,6,21))
+        distributions = resampleWeights.makeDistribution(np.linspace(-2,4,22))
 
     init_op = tf.group(
         tf.global_variables_initializer(),
@@ -278,6 +286,7 @@ for epoch in range(args.resume, args.nepochs):
             #print train_batch_value
             train_inputs_class = [
                 train_batch_value['gen'],
+                train_batch_value['gen']+np.random.normal(0,1,size=train_batch_value['gen'].shape),
                 train_batch_value['globalvars'],
                 train_batch_value['cpf'],
                 train_batch_value['npf'],
@@ -286,9 +295,7 @@ for epoch in range(args.resume, args.nepochs):
                 train_batch_value['electron'],
             ]
 
-
-
-            train_outputs = modelClass.train_on_batch(train_inputs_class,train_batch_value['truth'])
+            train_outputs = modelClassTrain.train_on_batch(train_inputs_class,train_batch_value['truth'])
             train_loss+=train_outputs[0]
             if step%10==0:
                 logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
@@ -364,7 +371,7 @@ for epoch in range(args.resume, args.nepochs):
 
         
     if epoch%5==0:
-        testMonitor.save(os.path.join(outputFolder,'test_%i.hdf5'%(epoch)))
+        #testMonitor.save(os.path.join(outputFolder,'test_%i.hdf5'%(epoch)))
         testMonitor.plot(featureDict['truth']['names'],os.path.join(outputFolder,'test_%i'%(epoch)))
             
     
@@ -414,7 +421,7 @@ for epoch in range(args.resume, args.nepochs):
             #auc = perfMonitor.auc()
             #logging.info("Done perf %i for %i steps of epoch %i: auc=%.2f%%"%(iperf,step,epoch,100.*auc))
             
-            perfMonitor.save(os.path.join(outputFolder,'perf_%i_%i.hdf5'%(iperf,epoch)))
+            #perfMonitor.save(os.path.join(outputFolder,'perf_%i_%i.hdf5'%(iperf,epoch)))
             perfMonitor.plot(featureDict['truth']['names'],os.path.join(outputFolder,'perf_%i_%i'%(iperf,epoch)))
     resetSession()
     

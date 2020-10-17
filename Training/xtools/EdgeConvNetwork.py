@@ -6,29 +6,49 @@ import sys
 import logging
 import xtools
 
-class EdgeConvLayer(keras.layers.Layer):
+class PairwiseAttentionLayer(keras.layers.Layer):
     def __init__(
         self,
+        nfilters, #feature transform per node
+        nattentions, #attention weights per pair of nodes 
         **kwargs
     ):
         super(EdgeConvLayer,self).__init__(**kwargs)
-        
+        self.nfilters = nfilters 
+        self.nattentions = nattentions
         
     def build(self, input_shape):
-        self.weight = self.add_weight(
-            shape=(self.units,),
-            initializer=self.bias_initializer,
-            regularizer=self.bias_regularizer,
-            constraint=self.bias_constraint,
-            name='%s_weight'.format(self.name),
-        )
+        nNodes = input_shape[1]
+        nFeatures = input_shape[2]
+        
+        
+        self.feature_layers = []
+        
+        
+        for i,nfilter in enumerate(nfilters):
+            self.feature_layers.append(Dense(nfilter))
+            
+            
+        self.attention_kernels = []
+        self.attention_biases = []
+        
+        for i,nattention in enumerate(self.nattentions):
+            self.attention_kernels.append(self.add_weight(
+                shape=(nFeatures,nfilter),
+                initializer=self.kernel_initializer,
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                name='%s_%i_feature_kernel'.format(self.name,i),
+            ))
     
         super(EdgeConvLayer, self).build(input_shape)
 
     
        
     def call(self, inputs, **kwargs):
+        nNodes = inputs.shape[1]
         
+        for i in 
         
     def get_config(self):
         config = {

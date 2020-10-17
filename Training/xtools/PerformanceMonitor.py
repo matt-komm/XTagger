@@ -32,6 +32,38 @@ class PerformanceMonitor():
             
     def plot(self,classNames,path):
         self.concat()
+        
+        plt.figure(figsize=[4.4*len(classNames),3.7*len(classNames)],dpi=120)
+        index = 0
+        for ibkg, bkg in enumerate(classNames):
+            for isig, sig in enumerate(classNames):
+                index+=1
+                if ibkg==isig:
+                    continue
+                selectBkg = self.truths[:,ibkg]>0.5
+                selectSignal = self.truths[:,isig]>0.5
+                bkgScore = self.scores[selectBkg][:,isig]
+                signalScore = self.scores[selectSignal][:,isig]
+                plt.subplot(
+                    len(classNames),len(classNames), index, 
+                    ylabel='Normalized events', 
+                    xlabel=sig+' discriminant'
+                )
+                              
+                plt.hist(signalScore, bins=np.linspace(0,1,51), linewidth=2, histtype='step',  density=True, color='darkorange',label=sig)
+                plt.hist(bkgScore, bins=np.linspace(0,1,51), linewidth=2, histtype='step',  density=True, color='blue',label=bkg)
+                plt.xlim([0.0, 1.0])
+                #plt.yscale('log')
+                #plt.title('ROC curve')
+                plt.grid(b=True,which='both',axis='both',linestyle='--')
+                plt.legend(loc="upper center")
+        plt.tight_layout()
+        plt.savefig(path+"_discriminant.pdf",format='pdf')
+        plt.close()
+                
+                
+                
+        
         plt.figure(figsize=[4.4*len(classNames),3.7*len(classNames)],dpi=120)
         index = 0
         
@@ -86,8 +118,12 @@ class PerformanceMonitor():
             np.argmax(self.scores,axis=1), 
             #normalize='true'
         )
-        confusionMatrix = 1.*confusionMatrix/np.sum(confusionMatrix,axis=1)
-        
+        confusionMatrix = 1.*confusionMatrix
+        normSum = np.sum(confusionMatrix,axis=1)
+        for itruth in range(len(classNames)):
+            for ipred in range(len(classNames)):
+                confusionMatrix[itruth,ipred]/=normSum[itruth]
+                
                 
         fig, ax = plt.subplots()
         ax.pcolor(confusionMatrix)

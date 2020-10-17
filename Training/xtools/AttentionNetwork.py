@@ -13,7 +13,7 @@ class AttentionNetwork(xtools.NominalNetwork):
 
         #### CPF ####
         self.cpf_conv = []
-        for i,filters in enumerate([64,32,32,16]):
+        for i,filters in enumerate([64,32,32,12]):
             self.cpf_conv.extend([
                 keras.layers.Conv1D(
                     filters,1,
@@ -22,7 +22,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name='cpf_conv'+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
@@ -39,7 +39,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name='cpf_attention'+str(i+1)
                 ),
             ])
@@ -64,7 +64,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name="npf_conv"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
@@ -80,7 +80,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name="npf_attention"+str(i+1)
                 ),
             ])
@@ -111,7 +111,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name="features_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
@@ -126,7 +126,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l2(1e-8),
                     name="class_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
@@ -137,7 +137,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                 self.nclasses,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l2(1e-6),
+                kernel_regularizer=keras.regularizers.l2(1e-8),
                 name="class_nclasses"
             ),
             keras.layers.Softmax(name="class_softmax")
