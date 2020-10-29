@@ -3,6 +3,7 @@ import logging
 import sys
 import random
 import copy
+import os
 import numpy as np
 import xtools
 
@@ -137,6 +138,13 @@ class ResampledDistribution():
             ROOT.kOrange+1,ROOT.kOrange+2,ROOT.kOrange+2
         ]
         
+        
+        legend = ROOT.TLegend(1-cv.GetPad(1).GetRightMargin(),1-cv.GetPad(1).GetTopMargin(),0.99,1-cv.GetPad(1).GetTopMargin()-0.06*len(self.ptHists))
+        legend.SetTextFont(43)
+        legend.SetBorderSize(0)
+        legend.SetFillStyle(0)
+        legend.SetTextSize(30)
+        
         cv.cd(1)
         axisPt = ROOT.TH2F(
             "axispt"+str(random.random()),";Jet p#lower[0.2]{#scale[0.8]{T}} (GeV); #Jets",
@@ -150,6 +158,8 @@ class ResampledDistribution():
             self.ptHists[i].SetLineWidth(2+i%2)
             self.ptHists[i].SetLineStyle(1+i%2)
             self.ptHists[i].Draw("SameHIST")
+            legend.AddEntry(self.ptHists[i],k,"L")
+        
         
         cv.cd(2)
         axisEta = ROOT.TH2F(
@@ -176,7 +186,8 @@ class ResampledDistribution():
             self.paramHists[i].SetLineWidth(2+i%2)
             self.paramHists[i].SetLineStyle(1+i%2)
             self.paramHists[i].Draw("SameHIST")
-        
+        cv.cd()
+        legend.Draw()
         cv.Print(path)
 
 class ResampleWeights():
@@ -187,16 +198,19 @@ class ResampleWeights():
         labelWeightList,
         targetWeight,
         ptBinning=np.logspace(1,2,20),
-        etaBinning=np.linspace(-2.4,2.4,10)
+        etaBinning=np.linspace(-2.4,2.4,10),
+        paramBinning=np.linspace(-3,3,10)
     ):
         self.labelNameList = labelNameList
         self.labelWeightList = labelWeightList
         self.targetWeight = targetWeight
         self.ptBinning = ptBinning
         self.etaBinning = etaBinning
+        self.paramBinning = paramBinning
         
         self.labelNameList = labelNameList
         self.histPerLabel = {}
+        self.paramHists = {}
         
         if len(labelNameList)!=len(labelWeightList):
             logging.critical("Length of label names (%i) and weights (%i) do not match!"%(len(labelNameList),len(labelWeightList)))
@@ -212,10 +226,12 @@ class ResampleWeights():
         logging.info("Total entries: %i"%nEntries)
         
         for ilabel,labelWeight in enumerate(self.labelWeightList):
-            hist = self.projectHist(chain,self.labelNameList[ilabel],labelWeight)
-            self.histPerLabel[self.labelNameList[ilabel]] = hist
+            histPtEta = self.projectHistPtEta(chain,self.labelNameList[ilabel],labelWeight)
+            histParam = self.projectHistParam(chain,self.labelNameList[ilabel],labelWeight)
+            self.histPerLabel[self.labelNameList[ilabel]] = histPtEta
+            self.paramHists[self.labelNameList[ilabel]] = histParam
             
-        self.histTarget = self.projectHist(chain,'target',self.targetWeight)
+        self.histTarget = self.projectHistPtEta(chain,'target',self.targetWeight)
         self.totalIntegral = sum(map(lambda x: x.Integral(),self.histPerLabel.values()))
         if self.totalIntegral<100:
             logging.critical("Total number of jets too small:"+str(self.totalIntegral))
@@ -291,7 +307,7 @@ class ResampleWeights():
             weightHistsPerLabel[k]['denominator'] = denominatorHist
         return Weights(self.labelNameList, weightHistsPerLabel,self.ptBinning,self.etaBinning)
         
-    def projectHist(self,chain,histName,labelWeight):
+    def projectHistPtEta(self,chain,histName,labelWeight):
         hist = ROOT.TH2F(
             histName+str(random.random()), "", 
             len(self.ptBinning)-1, self.ptBinning,
@@ -311,12 +327,27 @@ class ResampleWeights():
             logging.warning("No entries found for label '%s' and weight '%s'"%(histName,labelWeight))
         return hist
         
-    def makeDistribution(self,paramBinning):
+    def projectHistParam(self,chain,histName,labelWeight):
+        hist = ROOT.TH1F(
+            histName+str(random.random()), "", 
+            len(self.paramBinning)-1, self.paramBinning,
+        )
+        hist.Sumw2()
+        chain.Project(
+            hist.GetName(),
+            "jetorigin_displacement_xy",
+            "("+labelWeight+">0.5)"
+        )
+                      
+        hist.SetDirectory(0)
+        return hist
+        
+    def makeDistribution(self):
         return ResampledDistribution(
             self.labelNameList,
             self.ptBinning,
             self.etaBinning,
-            paramBinning
+            self.paramBinning
         )
         
     def getLabelNameList(self):
@@ -355,8 +386,31 @@ class ResampleWeights():
             legend.AddEntry(ptHists[k],k,"L")
         legend.Draw("Same")
             
-        cv.Print(path)
+        cv.Print(os.path.join(path,"hists.pdf"))
         
+        
+        
+        
+        cvParam = xtools.style.makeCanvas(name="cvHist"+str(random.random()))
+        cvParam.SetMargin(0.13,0.25,0.17,0.05)
+        
+        axisParam = ROOT.TH2F("axisParam"+str(random.random()),";Jet displacement;#Jets",
+            len(self.paramBinning)-1,self.paramBinning,
+            50,np.linspace(0,1.1*max(map(lambda x: x.GetMaximum(),self.paramHists.values())),51)
+        )
+        axisParam.Draw("AXIS")
+
+        for i,k in enumerate(self.labelNameList):
+            self.paramHists[k].SetLineColor(color[i])
+            self.paramHists[k].SetLineWidth(2+i%2)
+            self.paramHists[k].SetLineStyle(1+i%2)
+            self.paramHists[k].Draw("SameHIST")
+        legend.Draw("Same")
+            
+        cvParam.Print(os.path.join(path,"param.pdf"))
+        
+        
+        '''
         targetPtHist = self.histTarget.ProjectionX()
         targetPtHist.SetLineColor(ROOT.kBlack)
         targetPtHist.SetLineStyle(3)
@@ -374,4 +428,5 @@ class ResampleWeights():
             ptHists[k].Draw("SameHIST")
             targetPtHist.Draw("SameHIST")
             cvHist.Print(path.rsplit('.',1)[0]+"_"+k+"."+path.rsplit('.',1)[1])
+        '''
 

@@ -1371,10 +1371,10 @@ class NanoXTree
             }
 
             //ignore jet if reco/gen pt largely disagree -> likely random PU match
-            //require minimum of genjet pt of 5 GeV
+            //require minimum of genjet pt of 10 GeV
             if (addTruth_ and jetorigin_isPU[indexOrigin]==0 and Jet_genJetIdx[jet]>-1 and Jet_genJetIdx[jet]<maxJets)
             {
-                if ((GenJet_pt[Jet_genJetIdx[jet]]<5.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
+                if ((GenJet_pt[Jet_genJetIdx[jet]]<10.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
                 {
                     //std::cout << "Skipping jet with mismatched genpt: reco pt="<<Jet_pt[jet] << ", genpt="<<GenJet_pt[Jet_genJetIdx[jet]] << std::endl;
                     return false;
@@ -1399,8 +1399,8 @@ class NanoXTree
                 return false;
             }
 
-            //not required anymore since prompt lepton classes are integrated
-            //if (Jet_nConstituents[jet]<4) return false;
+
+            //if (Jet_nConstituents[jet]<3) return false;
 
 
             if (jetorigin_isPrompt_E[indexOrigin]<0.5 and jetorigin_isPrompt_MU[indexOrigin]<0.5 and jetorigin_isPrompt_TAU[indexOrigin]<0.5)
@@ -1875,6 +1875,36 @@ class NanoXTree
                     unpackedTree.muonBranches[ifeature]->setFloat(i,muonBranches[ifeature]->getFloat(muon_offset+i));
 	            }
             }
+            
+            if (nmuon == 0)
+            {
+                if (unpackedTree.jetorigin_isLLP_MU>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_MU = 0.0;
+                    unpackedTree.jetorigin_isLLP_RAD = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_QMU>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_QMU = 0.0;
+                    unpackedTree.jetorigin_isLLP_Q = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_QQMU>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_QQMU = 0.0;
+                    unpackedTree.jetorigin_isLLP_QQ = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_BMU>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_BMU = 0.0;
+                    unpackedTree.jetorigin_isLLP_B = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_BBMU>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_BBMU = 0.0;
+                    unpackedTree.jetorigin_isLLP_BB = 1.0;
+                }
+            }
+            
 
 
             int electron_offset = 0;
@@ -1898,7 +1928,36 @@ class NanoXTree
                     unpackedTree.electronBranches[ifeature]->setFloat(i,electronBranches[ifeature]->getFloat(electron_offset+i));
                 }
             }
-
+            
+            if (nelectron == 0)
+            {
+                if (unpackedTree.jetorigin_isLLP_E>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_E = 0.0;
+                    unpackedTree.jetorigin_isLLP_RAD = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_QE>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_QE = 0.0;
+                    unpackedTree.jetorigin_isLLP_Q = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_QQE>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_QQE = 0.0;
+                    unpackedTree.jetorigin_isLLP_QQ = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_BE>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_BE = 0.0;
+                    unpackedTree.jetorigin_isLLP_B = 1.0;
+                }
+                else if (unpackedTree.jetorigin_isLLP_BBE>0.5) 
+                {
+                    unpackedTree.jetorigin_isLLP_BBE = 0.0;
+                    unpackedTree.jetorigin_isLLP_BB = 1.0;
+                }
+            }
+            
             unpackedTree.fill();
             return true;
         }

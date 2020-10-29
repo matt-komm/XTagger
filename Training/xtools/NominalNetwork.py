@@ -63,7 +63,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name='cpf_conv'+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='cpf_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
@@ -88,7 +88,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="npf_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='npf_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
@@ -113,7 +113,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="sv_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='sv_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="sv_activation"+str(i+1)),
@@ -138,7 +138,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="muon_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='muon_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="muon_activation"+str(i+1)),
@@ -163,7 +163,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="electron_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='electron_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="electron_activation"+str(i+1)),
@@ -187,7 +187,7 @@ class NominalNetwork():
                     200,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    #kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="features_dense"+str(i)
                 ),
                 keras.layers.Activation('relu',name='features_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
@@ -202,7 +202,7 @@ class NominalNetwork():
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="class_dense"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='class_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
@@ -213,7 +213,7 @@ class NominalNetwork():
                 self.nclasses,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l2(1e-8),
+                kernel_regularizer=keras.regularizers.l2(1e-6),
                 name="class_nclasses"
             )
         ])
@@ -357,7 +357,8 @@ class NominalNetwork():
                 predictedClass,
             ]
         )
-        model.add_loss(tf.reduce_mean(tf.square(predictedClass-predictedClassShift)))
+        model.add_loss(0.1*tf.reduce_mean(tf.square(predictedClass-predictedClassShift)))
+        #model.add_loss(100.0*tf.constant([0.1]))#tf.square(predictedClass-predictedClassShift))
         return model
 
 network = NominalNetwork

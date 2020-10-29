@@ -13,7 +13,7 @@ class AttentionNetwork(xtools.NominalNetwork):
 
         #### CPF ####
         self.cpf_conv = []
-        for i,filters in enumerate([64,32,32,12]):
+        for i,filters in enumerate([64,32,32,8]):
             self.cpf_conv.extend([
                 keras.layers.Conv1D(
                     filters,1,
@@ -22,7 +22,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name='cpf_conv'+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
@@ -39,7 +39,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name='cpf_attention'+str(i+1)
                 ),
             ])
@@ -64,7 +64,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="npf_conv"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
@@ -80,7 +80,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="npf_attention"+str(i+1)
                 ),
             ])
@@ -111,7 +111,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="features_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
@@ -126,7 +126,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-8),
+                    kernel_regularizer=keras.regularizers.l2(1e-6),
                     name="class_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
@@ -137,7 +137,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                 self.nclasses,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l2(1e-8),
+                kernel_regularizer=keras.regularizers.l2(1e-6),
                 name="class_nclasses"
             ),
             keras.layers.Softmax(name="class_softmax")
@@ -145,6 +145,14 @@ class AttentionNetwork(xtools.NominalNetwork):
 
     def returnsLogits(self):
         return False
+        
+    def addToConvFeatures(self,conv,features):
+        def tileFeatures(x):
+            x = tf.reshape(tf.tile(features,[1,conv.shape[1]]),[-1,conv.shape[1],x.shape[1]])
+            return x
+            
+        tiled = keras.layers.Lambda(tileFeatures)(features)
+        return keras.layers.Concatenate(axis=2)([conv,tiled])
 
     def applyAttention(self,features,attention):
         result = keras.layers.Lambda(lambda x: tf.matmul(tf.transpose(x[0],[0,2,1]),x[1]))([attention,features])
@@ -154,15 +162,23 @@ class AttentionNetwork(xtools.NominalNetwork):
 
     def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen=None):
         globalvars_preproc = self.global_preproc(globalvars)
+        
+        global_features = keras.layers.Concatenate(axis=1)([globalvars_preproc,gen])
 
-        cpf_conv = self.applyLayers(self.cpf_preproc(cpf),self.cpf_conv)
-        npf_conv = self.applyLayers(self.npf_preproc(npf),self.npf_conv)
-        sv_conv = self.applyLayers(self.sv_preproc(sv),self.sv_conv)
-        muon_conv = self.applyLayers(self.muon_preproc(muon),self.muon_conv)
-        electron_conv = self.applyLayers(self.electron_preproc(electron),self.electron_conv)
+        cpf_features = self.addToConvFeatures(self.cpf_preproc(cpf),global_features)
+        npf_features = self.addToConvFeatures(self.npf_preproc(npf),global_features)
+        sv_features = self.addToConvFeatures(self.sv_preproc(sv),global_features)
+        muon_features = self.addToConvFeatures(self.muon_preproc(muon),global_features)
+        electron_features = self.addToConvFeatures(self.electron_preproc(electron),global_features)
 
-        cpf_attention = self.applyLayers(self.cpf_preproc(cpf),self.cpf_attention)
-        npf_attention = self.applyLayers(self.npf_preproc(npf),self.npf_attention)
+        cpf_conv = self.applyLayers(cpf_features,self.cpf_conv)
+        npf_conv = self.applyLayers(npf_features,self.npf_conv)
+        sv_conv = self.applyLayers(sv_features,self.sv_conv)
+        muon_conv = self.applyLayers(muon_features,self.muon_conv)
+        electron_conv = self.applyLayers(electron_features,self.electron_conv)
+
+        cpf_attention = self.applyLayers(cpf_features,self.cpf_attention)
+        npf_attention = self.applyLayers(npf_features,self.npf_attention)
 
         cpf_tensor = self.applyAttention(cpf_conv,cpf_attention)
         npf_tensor = self.applyAttention(npf_conv,npf_attention)

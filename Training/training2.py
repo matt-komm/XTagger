@@ -136,10 +136,11 @@ resampleWeights = xtools.ResampleWeights(
             +'||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE' \
             +'||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU',
     ptBinning=np.concatenate([[10.],np.logspace(1.2,2.1,22)]),#np.array([10., 12.5, 15., 17.5, 20., 22.5, 25.,27.5 30.,3 35., 40., 50., 60., 70., 80., 100., 120.]),
-    etaBinning=np.linspace(-2.4,2.4,6)
+    etaBinning=np.linspace(-2.4,2.4,6),
+    paramBinning=np.linspace(-3,3,10)
 )
 
-resampleWeights.plot(os.path.join(outputFolder,"hists.pdf"))
+resampleWeights.plot(outputFolder)
 weights = resampleWeights.reweight(classBalance=True,oversampling=5)
 weights.plot(os.path.join(outputFolder,"weights.pdf"))
 weights.save(os.path.join(outputFolder,"weights.root"))
@@ -192,8 +193,9 @@ for epoch in range(args.resume, args.nepochs):
     Network = imp.load_source('Network', os.path.join(args.outputFolder,"Network.py")).network
 
     network = Network(featureDict)
-    modelClassTrain = network.makeClassModelWithAlt()
+    #modelClassTrain = network.makeClassModelWithAlt()
     modelClass = network.makeClassModel()
+
 
     learningRateDecay = 1./(1.+args.kappa*max(0,epoch-5)**1.5)
     learningRate = args.lr*learningRateDecay
@@ -206,14 +208,19 @@ for epoch in range(args.resume, args.nepochs):
             labels=ytrue,
             logits=ypredicted,
         ))
+        
+    def llp_loss(ytrue,ypredicted):
+        return 1.*keras.losses.categorical_crossentropy(ytrue,ypredicted)+\
+               0.*keras.losses.binary_crossentropy(tf.reduce_sum(ytrue[:,8:],axis=1,keepdims=True),tf.reduce_sum(ypredicted[:,8:],axis=1,keepdims=True))
 
+    '''
     modelClassTrain.compile(
         optClass,
-        loss=logit_loss if network.returnsLogits() else keras.losses.categorical_crossentropy,
+        loss=logit_loss if network.returnsLogits() else llp_loss,
         metrics=[keras.metrics.categorical_accuracy],
         loss_weights=[1.]
     )
-
+    '''
     modelClass.compile(
         optClass,
         loss=logit_loss if network.returnsLogits() else keras.losses.categorical_crossentropy,
@@ -231,7 +238,7 @@ for epoch in range(args.resume, args.nepochs):
         perf_batches.append(perfPipeline.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 8:],axis=1) > 0.5))
 
     if epoch==0:
-        distributions = resampleWeights.makeDistribution(np.linspace(-2,4,22))
+        distributions = resampleWeights.makeDistribution()
 
     init_op = tf.group(
         tf.global_variables_initializer(),
@@ -263,17 +270,19 @@ for epoch in range(args.resume, args.nepochs):
 
             badValue = False
             for k,elem in train_batch_value.iteritems():
+                if k=='num':
+                    continue
                 if not np.isfinite(elem).all():
                     logging.error("Found non finite training value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
                     badValue = True
                 if np.any(elem>1e7) or np.any(elem<-1e7):
-                    logging.error("Found large training value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    logging.error("Found large training value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e7,elem<-1e7))))
                     badValue = True
                 #TODO: learn clipping and put into model
-                train_batch_value[k] = np.clip(np.nan_to_num(train_batch_value[k]),-1e6,1e6)
-            if badValue:
-                continue
-
+                train_batch_value[k] = np.nan_to_num(train_batch_value[k])
+            #if badValue:
+            #    continue
+            #print train_batch_value['gen']
             if epoch==0:
                 #featurePlotter.fill(train_batch_value)
 
@@ -283,10 +292,11 @@ for epoch in range(args.resume, args.nepochs):
                     train_batch_value['globalvars'][:,1],
                     train_batch_value['gen'][:,0],
                 )
+            #smearBkgGen = np.expand_dims((np.sum(train_batch_value['truth'][:,8:],axis=1)>0.5)*np.random.normal(0,1,size=train_batch_value['truth'].shape[0]),axis=1)
             #print train_batch_value
             train_inputs_class = [
                 train_batch_value['gen'],
-                train_batch_value['gen']+np.random.normal(0,1,size=train_batch_value['gen'].shape),
+                #train_batch_value['gen']+smearBkgGen,
                 train_batch_value['globalvars'],
                 train_batch_value['cpf'],
                 train_batch_value['npf'],
@@ -295,7 +305,8 @@ for epoch in range(args.resume, args.nepochs):
                 train_batch_value['electron'],
             ]
 
-            train_outputs = modelClassTrain.train_on_batch(train_inputs_class,train_batch_value['truth'])
+
+            train_outputs = modelClass.train_on_batch(train_inputs_class,train_batch_value['truth'])
             train_loss+=train_outputs[0]
             if step%10==0:
                 logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
@@ -333,7 +344,7 @@ for epoch in range(args.resume, args.nepochs):
                 if np.any(elem>1e7) or np.any(elem<-1e7):
                     logging.error("Found large testing value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
                     badValue = True
-                test_batch_value[k] = np.clip(np.nan_to_num(test_batch_value[k]),-1e6,1e6)
+                test_batch_value[k] = np.nan_to_num(test_batch_value[k])
                 
             if badValue:
                 continue

@@ -3,7 +3,7 @@ import tensorflow as tf
 featureDict = {
     "truth": {
         "names":[
-            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU",
+            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU"#,"LLP_QTAU"
         ],
         "weights":[
             "jetorigin_isPrompt_E",
@@ -22,11 +22,22 @@ featureDict = {
             #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
             #"jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
 
-            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",
 
-            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
-            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
-            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            
+            #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB",
+
+
+            #"jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            #"jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            
+            #"jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU"
+            
+            #"jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            #"jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
 
         ],
         "branches":[
@@ -39,11 +50,13 @@ featureDict = {
             "jetorigin_isG",
             "jetorigin_isPU",
 
-            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",
+            #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB",
 
-            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
-            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
-            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            #"jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU"
         ],
     },
 
