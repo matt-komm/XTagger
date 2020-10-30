@@ -1051,7 +1051,7 @@ class NanoXTree
             tree_->SetBranchAddress("nelectron",&nelectron);
             tree_->SetBranchAddress("electron_jetIdx",&electron_jetIdx);
             electronBranches = branchAddresses<maxEntries_electron>(tree_,electronFeatures);
-            
+
             tree_->SetCacheSize(10);
             tree_->SetMaxVirtualSize(16000);
 
@@ -1306,8 +1306,8 @@ class NanoXTree
                 }
 
                 TLorentzVector jetP4Subtracted = jetP4 - leptonP4Sum;
-            
-                if (jetP4Subtracted.Pt()<10.) 
+
+                if (jetP4Subtracted.Pt()<10.)
                 {
                     return false;
                 }
@@ -1932,7 +1932,7 @@ int main(int argc, char **argv)
         {
             //std::cout<<"   "<<argv[iarg]<<", nEvents="<<;
             TFile* file = TFile::Open(inputFileName.c_str());
-            if (not file)
+            if (not file or file->IsZombie())
             {
                 std::cout<<"Warning: File '"<<inputFileName<<"' cannot be read"<<std::endl;
                 continue;
