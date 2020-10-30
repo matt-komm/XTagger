@@ -270,19 +270,18 @@ for epoch in range(args.resume, args.nepochs):
 
             badValue = False
             for k,elem in train_batch_value.iteritems():
+                train_batch_value[k] = np.nan_to_num(train_batch_value[k])
                 if k=='num':
                     continue
                 if not np.isfinite(elem).all():
                     logging.error("Found non finite training value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
                     badValue = True
-                if np.any(elem>1e7) or np.any(elem<-1e7):
-                    logging.error("Found large training value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e7,elem<-1e7))))
+                if np.any(elem>1e8) or np.any(elem<-1e8):
+                    logging.error("Found large training value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
                     badValue = True
                 #TODO: learn clipping and put into model
-                train_batch_value[k] = np.nan_to_num(train_batch_value[k])
-            #if badValue:
-            #    continue
-            #print train_batch_value['gen']
+                
+
             if epoch==0:
                 #featurePlotter.fill(train_batch_value)
 
@@ -338,16 +337,15 @@ for epoch in range(args.resume, args.nepochs):
 
             badValue = False
             for k,elem in test_batch_value.iteritems():
+                test_batch_value[k] = np.nan_to_num(test_batch_value[k])
+                if k=='num':
+                    continue
                 if not np.isfinite(elem).all():
                     logging.error("Found non finite testing value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
                     badValue = True
-                if np.any(elem>1e7) or np.any(elem<-1e7):
-                    logging.error("Found large testing value (>1e7 or <-1e7) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                if np.any(elem>1e8) or np.any(elem<-1e8):
+                    logging.error("Found large testing value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
                     badValue = True
-                test_batch_value[k] = np.nan_to_num(test_batch_value[k])
-                
-            if badValue:
-                continue
                 
             #print train_batch_value
             test_inputs_class = [
@@ -403,7 +401,9 @@ for epoch in range(args.resume, args.nepochs):
                 while not coord.should_stop():
                     step += 1
                     perf_batch_value = sess.run(perf_batch)
-                    
+                    for k,elem in perf_batch_value.iteritems():
+                        perf_batch_value[k] = np.nan_to_num(perf_batch_value[k])
+                        
                     selectSignal = np.sum(perf_batch_value['truth'][:,8:],axis=1)>0.5
                     meanParameter = np.mean(perf_batch_value['gen'][selectSignal])
                     stdParameter = np.std(perf_batch_value['gen'][selectSignal])
