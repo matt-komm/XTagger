@@ -14,6 +14,7 @@
 #include <string>
 #include <random>
 #include <algorithm>
+#include <regex>
 
 #include "cmdParser.hpp"
 #include "exprtk.hpp"
@@ -25,6 +26,7 @@ class Feature
         {
             Float,
             Int,
+            UInt,
             Double,
             Bool,
             Short,
@@ -54,6 +56,7 @@ class Feature
             {
                 case Float: return "F";
                 case Int: return "I";
+                case UInt: return "i";
                 case Double: return "D";
                 case Bool: return "O";
                 case Short: return "S";
@@ -86,6 +89,7 @@ class BranchData
             {
                 case Feature::Float: return makeBranch<float,N>(tree,branchName,branchType,bufferSize);
                 case Feature::Int: return makeBranch<int,N>(tree,branchName,branchType,bufferSize);
+                case Feature::UInt: return makeBranch<unsigned int,N>(tree,branchName,branchType,bufferSize);
                 case Feature::Double: return makeBranch<double,N>(tree,branchName,branchType,bufferSize);
                 case Feature::Bool: return makeBranch<bool,N>(tree,branchName,branchType,bufferSize);
                 case Feature::Short: return makeBranch<short,N>(tree,branchName,branchType,bufferSize);
@@ -99,6 +103,7 @@ class BranchData
             {
                 case Feature::Float: return branchAddress<float,N>(tree,branchName);
                 case Feature::Int: return branchAddress<int,N>(tree,branchName);
+                case Feature::UInt: return branchAddress<unsigned int,N>(tree,branchName);
                 case Feature::Double: return branchAddress<double,N>(tree,branchName);
                 case Feature::Bool: return branchAddress<bool,N>(tree,branchName);
                 case Feature::Short: return branchAddress<short,N>(tree,branchName);
@@ -284,8 +289,7 @@ static const std::vector<Feature> globalFeatures{
     Feature("global_frac03"),
     Feature("global_frac04"),
     Feature("global_jetR"),
-    Feature("global_jetRchg")
-
+    Feature("global_jetRchg"),
 };
 
 static const std::vector<Feature> csvFeatures{
@@ -302,6 +306,15 @@ static const std::vector<Feature> csvFeatures{
 
 
 static const std::vector<Feature> cpfFeatures{
+    Feature("cpf_ptrel"),
+    Feature("cpf_deta"),
+    Feature("cpf_dphi"),
+    //Feature("cpf_deltaR"),
+    
+    Feature("cpf_px"),
+    Feature("cpf_py"),
+    Feature("cpf_pz"),
+
     Feature("cpf_trackEtaRel"),
     Feature("cpf_trackPtRel"),
     Feature("cpf_trackPPar"),
@@ -314,25 +327,24 @@ static const std::vector<Feature> cpfFeatures{
     Feature("cpf_trackSip3dSig"),
     Feature("cpf_trackJetDistVal"),
     Feature("cpf_trackJetDistSig"),
-    Feature("cpf_ptrel"),
     Feature("cpf_drminsv"),
     Feature("cpf_vertex_association"),
     Feature("cpf_fromPV"),
     Feature("cpf_puppi_weight"),
     Feature("cpf_track_chi2"),
     Feature("cpf_track_quality"),
-    Feature("cpf_track_ndof", Feature::Int),
+    //Feature("cpf_track_numberOfValidPixelHits", Feature::Int),
+    //Feature("cpf_track_pixelLayersWithMeasurement", Feature::Int),
+    //Feature("cpf_track_numberOfValidStripHits", Feature::Int),
+    //Feature("cpf_track_stripLayersWithMeasurement", Feature::Int),
+    Feature("cpf_relmassdrop"),
+
     Feature("cpf_matchedMuon", Feature::Int),
     Feature("cpf_matchedElectron", Feature::Int),
     Feature("cpf_matchedSV", Feature::Int),
-    Feature("cpf_numberOfValidPixelHits", Feature::Int),
-    Feature("cpf_pixelLayersWithMeasurement",Feature::Int),
-    Feature("cpf_numberOfValidStripHits" , Feature::Int),
-    Feature("cpf_stripLayersWithMeasurement" , Feature::Int),
-    Feature("cpf_relmassdrop"),
-    Feature("cpf_dzMin")
-    //Feature("cpf_deta"),
-    //Feature("cpf_dphi")
+    Feature("cpf_track_ndof", Feature::Int),
+
+    //Feature("cpf_dZmin")
 };
 
 static const std::vector<Feature> npfFeatures{
@@ -340,6 +352,11 @@ static const std::vector<Feature> npfFeatures{
     Feature("npf_deta"),
     Feature("npf_dphi"),
     Feature("npf_deltaR"),
+    
+    Feature("npf_px"),
+    Feature("npf_py"),
+    Feature("npf_pz"),
+    
     Feature("npf_isGamma"),
     Feature("npf_hcal_fraction"),
     Feature("npf_drminsv"),
@@ -376,9 +393,14 @@ static const std::vector<Feature> muonFeatures{
     Feature("muon_EtaRel"),
     Feature("muon_dphi"),
     Feature("muon_deta"),
+    
+    Feature("muon_px"),
+    Feature("muon_py"),
+    Feature("muon_pz"),
+    
     Feature("muon_charge"),
     Feature("muon_energy"),
-    Feature("muon_jetDeltaR"),
+    Feature("muon_deltaR"),
     Feature("muon_numberOfMatchedStations"),
 
     Feature("muon_2dIP"),
@@ -391,6 +413,7 @@ static const std::vector<Feature> muonFeatures{
     Feature("muon_dxySig"),
     Feature("muon_dz"),
     Feature("muon_dzError"),
+    Feature("muon_dzSig"),
     Feature("muon_numberOfValidPixelHits",Feature::Int),
     Feature("muon_numberOfpixelLayersWithMeasurement",Feature::Int),
     Feature("muon_numberOfstripLayersWithMeasurement",Feature::Int),
@@ -419,9 +442,12 @@ static const std::vector<Feature> muonFeatures{
 
 static const std::vector<Feature> electronFeatures{
     Feature("electron_ptrel"),
-    Feature("electron_jetDeltaR"),
+    Feature("electron_deltaR"),
     Feature("electron_deta"),
     Feature("electron_dphi"),
+    Feature("electron_px"),
+    Feature("electron_py"),
+    Feature("electron_pz"),
     Feature("electron_charge"),
     Feature("electron_energy"),
     Feature("electron_EtFromCaloEn"),
@@ -468,7 +494,11 @@ static const std::vector<Feature> electronFeatures{
 
     Feature("electron_EtaRel"),
     Feature("electron_dxy"),
+    Feature("electron_dxyError"),
+    Feature("electron_dxySig"),
     Feature("electron_dz"),
+    Feature("electron_dzError"),
+    Feature("electron_dzSig"),
     Feature("electron_nbOfMissingHits"),
     Feature("electron_gsfCharge"),
     Feature("electron_ndof",Feature::Int),
@@ -505,6 +535,88 @@ static const std::vector<Feature> electronFeatures{
     Feature("electron_dr04HcalTowerSumEtBc")
 };
 
+
+constexpr static size_t nClasses = 40;
+static const std::vector<Feature> jetLabels{
+    Feature("jetorigin_isPrompt_E",Feature::Int),
+    Feature("jetorigin_isPrompt_MU",Feature::Int),
+    Feature("jetorigin_isPrompt_TAU",Feature::Int),
+    Feature("jetorigin_isPrompt_PHOTON",Feature::Int),
+
+    Feature("jetorigin_isPU",Feature::Int),
+    Feature("jetorigin_isB",Feature::Int),
+    Feature("jetorigin_isBB",Feature::Int),
+    Feature("jetorigin_isLeptonic_B",Feature::Int),
+    Feature("jetorigin_isC",Feature::Int),
+    Feature("jetorigin_isCC",Feature::Int),
+    Feature("jetorigin_isLeptonic_C",Feature::Int),
+    Feature("jetorigin_isS",Feature::Int),
+    Feature("jetorigin_isUD",Feature::Int),
+    Feature("jetorigin_isG",Feature::Int),
+
+    //Include LLP flavour :
+    Feature("jetorigin_isLLP_RAD",Feature::Int), //no flavour match (likely from wide angle radiation)
+    Feature("jetorigin_isLLP_Q",Feature::Int),
+    Feature("jetorigin_isLLP_QQ",Feature::Int),
+
+    Feature("jetorigin_isLLP_B",Feature::Int),
+    Feature("jetorigin_isLLP_BB",Feature::Int),
+
+    Feature("jetorigin_isLLP_MU",Feature::Int), //prompt lepton
+    Feature("jetorigin_isLLP_QMU",Feature::Int),
+    Feature("jetorigin_isLLP_QQMU",Feature::Int),
+
+    Feature("jetorigin_isLLP_BMU",Feature::Int),
+    Feature("jetorigin_isLLP_BBMU",Feature::Int),
+
+    Feature("jetorigin_isLLP_E",Feature::Int), //prompt lepton
+    Feature("jetorigin_isLLP_QE",Feature::Int),
+    Feature("jetorigin_isLLP_QQE",Feature::Int),
+
+    Feature("jetorigin_isLLP_BE",Feature::Int),
+    Feature("jetorigin_isLLP_BBE",Feature::Int),
+
+    Feature("jetorigin_isLLP_TAU",Feature::Int),
+    Feature("jetorigin_isLLP_QTAU",Feature::Int),
+    Feature("jetorigin_isLLP_QQTAU",Feature::Int),
+    Feature("jetorigin_isLLP_BTAU",Feature::Int),
+    Feature("jetorigin_isLLP_BBTAU",Feature::Int),
+    
+    Feature("jetorigin_isLLP_PHOTON",Feature::Int),
+    Feature("jetorigin_isLLP_QPHOTON",Feature::Int),
+    Feature("jetorigin_isLLP_QQPHOTON",Feature::Int),
+    Feature("jetorigin_isLLP_BPHOTON",Feature::Int),
+    Feature("jetorigin_isLLP_BBPHOTON",Feature::Int),
+
+    Feature("jetorigin_isUndefined",Feature::Int)
+};
+
+
+static const std::vector<Feature> jetoriginFeatures{
+    Feature("jetorigin_isTauDecay_NO_TAU",Feature::Int),
+    Feature("jetorigin_isTauDecay_INVISIBLE",Feature::Int),
+    Feature("jetorigin_isTauDecay_E",Feature::Int),
+    Feature("jetorigin_isTauDecay_MU",Feature::Int),
+    Feature("jetorigin_isTauDecay_H",Feature::Int),
+    Feature("jetorigin_isTauDecay_H_1PI0",Feature::Int),
+    Feature("jetorigin_isTauDecay_H_XPI0",Feature::Int),
+    Feature("jetorigin_isTauDecay_HHH",Feature::Int),
+    Feature("jetorigin_isTauDecay_HHH_XPI0",Feature::Int),
+    
+    Feature("jetorigin_displacement"),
+    Feature("jetorigin_decay_angle"),
+    Feature("jetorigin_displacement_xy"),
+    //Feature("jetorigin_displacement_z "),
+    //Feature("jetorigin_ctau"),
+    Feature("jetorigin_betagamma"),
+    Feature("jetorigin_partonFlavor",Feature::Int),
+    Feature("jetorigin_hadronFlavor",Feature::Int),
+    Feature("jetorigin_llpId",Feature::Int),
+    Feature("jetorigin_llp_mass"),
+    Feature("jetorigin_llp_pt")
+};
+
+
 class UnpackedTree
 {
     public:
@@ -520,63 +632,7 @@ class UnpackedTree
         static constexpr int maxEntries_electron = 2;
 
         static constexpr int bufferSize = 64000; //default is 32kB
-
-        float jetorigin_isPrompt_E;
-        float jetorigin_isPrompt_MU;
-        float jetorigin_isPrompt_TAU;
-
-        float jetorigin_isPU;
-        float jetorigin_isB;
-        float jetorigin_isBB;
-        float jetorigin_isGBB;
-        float jetorigin_isLeptonic_B;
-        float jetorigin_isLeptonic_C;
-        float jetorigin_isC;
-        float jetorigin_isCC;
-        float jetorigin_isGCC;
-        float jetorigin_isS;
-        float jetorigin_isUD;
-        float jetorigin_isG;
-
-        //Include LLP flavour :
-        float jetorigin_isLLP_RAD; //no flavour match (likely from wide angle radiation)
-        float jetorigin_isLLP_Q;
-        float jetorigin_isLLP_QQ;
-
-        float jetorigin_isLLP_B;
-        float jetorigin_isLLP_BB;
-
-        float jetorigin_isLLP_MU; //prompt lepton
-        float jetorigin_isLLP_QMU;
-        float jetorigin_isLLP_QQMU;
-
-        float jetorigin_isLLP_BMU;
-        float jetorigin_isLLP_BBMU;
-
-        float jetorigin_isLLP_E; //prompt lepton
-        float jetorigin_isLLP_QE;
-        float jetorigin_isLLP_QQE;
-
-        float jetorigin_isLLP_BE;
-        float jetorigin_isLLP_BBE;
-
-        float jetorigin_isLLP_TAU;
-        float jetorigin_isLLP_QTAU;
-        float jetorigin_isLLP_QQTAU;
-
-        float jetorigin_isUndefined;
-
-        float jetorigin_displacement;
-        float jetorigin_decay_angle;
-        float jetorigin_displacement_xy;
-        float jetorigin_displacement_z ;
-        float jetorigin_ctau;
-        float jetorigin_betagamma;
-        float jetorigin_partonFlavor;
-        float jetorigin_hadronFlavor;
-        float jetorigin_llpId;
-        float jetorigin_llp_mass;
-        float jetorigin_llp_pt;
+       
 
         float global_pt;
         float global_eta;
@@ -588,6 +644,9 @@ class UnpackedTree
 
         std::vector<std::shared_ptr<BranchData>> globalBranches;
         std::vector<std::shared_ptr<BranchData>> csvBranches;
+        
+        std::vector<std::shared_ptr<BranchData>> jetLabelBranches;
+        std::vector<std::shared_ptr<BranchData>> jetoriginBranches;
 
         unsigned int ncpf;
         std::vector<std::shared_ptr<BranchData>> cpfBranches;
@@ -639,62 +698,8 @@ class UnpackedTree
 
             if (addTruth)
             {
-                tree_->Branch("jetorigin_isPrompt_E",&jetorigin_isPrompt_E,"jetorigin_isPrompt_E/F",bufferSize);
-                tree_->Branch("jetorigin_isPrompt_MU",&jetorigin_isPrompt_MU,"jetorigin_isPrompt_MU/F",bufferSize);
-                tree_->Branch("jetorigin_isPrompt_TAU",&jetorigin_isPrompt_TAU,"jetorigin_isPrompt_TAU/F",bufferSize);
-
-                tree_->Branch("jetorigin_isPU",&jetorigin_isPU,"jetorigin_isPU/F",bufferSize);
-                tree_->Branch("jetorigin_isB",&jetorigin_isB,"jetorigin_isB/F",bufferSize);
-                tree_->Branch("jetorigin_isBB",&jetorigin_isBB,"jetorigin_isBB/F",bufferSize);
-                tree_->Branch("jetorigin_isGBB",&jetorigin_isGBB,"jetorigin_isGBB/F",bufferSize);
-                tree_->Branch("jetorigin_isLeptonic_B",&jetorigin_isLeptonic_B,"jetorigin_isLeptonic_B/F",bufferSize);
-                tree_->Branch("jetorigin_isLeptonic_C",&jetorigin_isLeptonic_C,"jetorigin_isLeptonic_C/F",bufferSize);
-                tree_->Branch("jetorigin_isC",&jetorigin_isC,"jetorigin_isC/F",bufferSize);
-                tree_->Branch("jetorigin_isCC",&jetorigin_isCC,"jetorigin_isCC/F",bufferSize);
-                tree_->Branch("jetorigin_isGCC",&jetorigin_isGCC,"jetorigin_isGCC/F",bufferSize);
-                tree_->Branch("jetorigin_isS",&jetorigin_isS,"jetorigin_isS/F",bufferSize);
-                tree_->Branch("jetorigin_isUD",&jetorigin_isUD,"jetorigin_isUD/F",bufferSize);
-                tree_->Branch("jetorigin_isG",&jetorigin_isG,"jetorigin_isG/F",bufferSize);
-
-                //Add LLP flavour :
-                tree_->Branch("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD, "jetorigin_isLLP_RAD/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_Q",&jetorigin_isLLP_Q, "jetorigin_isLLP_Q/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ, "jetorigin_isLLP_QQ/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_B",&jetorigin_isLLP_B, "jetorigin_isLLP_B/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_BB",&jetorigin_isLLP_BB, "jetorigin_isLLP_BB/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_MU",&jetorigin_isLLP_MU, "jetorigin_isLLP_MU/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU, "jetorigin_isLLP_QMU/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU, "jetorigin_isLLP_QQMU/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU, "jetorigin_isLLP_BMU/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU, "jetorigin_isLLP_BBMU/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_E",&jetorigin_isLLP_E, "jetorigin_isLLP_E/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QE",&jetorigin_isLLP_QE, "jetorigin_isLLP_QE/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE, "jetorigin_isLLP_QQE/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_BE",&jetorigin_isLLP_BE, "jetorigin_isLLP_BE/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE, "jetorigin_isLLP_BBE/F", bufferSize);
-
-                tree_->Branch("jetorigin_isLLP_TAU",&jetorigin_isLLP_TAU, "jetorigin_isLLP_TAU/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QTAU",&jetorigin_isLLP_QTAU, "jetorigin_isLLP_QTAU/F", bufferSize);
-                tree_->Branch("jetorigin_isLLP_QQTAU",&jetorigin_isLLP_QQTAU, "jetorigin_isLLP_QQTAU/F", bufferSize);
-
-                tree_->Branch("jetorigin_isUndefined",&jetorigin_isUndefined,"jetorigin_isUndefined/F",bufferSize);
-
-                tree_->Branch("jetorigin_displacement",&jetorigin_displacement,"jetorigin_displacement/F",bufferSize);
-                tree_->Branch("jetorigin_decay_angle",&jetorigin_decay_angle,"jetorigin_decay_angle/F",bufferSize);
-                tree_->Branch("jetorigin_displacement_xy" , &jetorigin_displacement_xy ,"jetorigin_displacement_xy/F" , bufferSize);
-                tree_->Branch("jetorigin_displacement_z" , &jetorigin_displacement_z ,"jetorigin_displacement_z/F" ,bufferSize);
-                tree_->Branch("jetorigin_ctau" , &jetorigin_ctau ,"jetorigin_ctau/F" ,bufferSize);
-                tree_->Branch("jetorigin_betagamma", &jetorigin_betagamma ,"jetorigin_betagamma/F" ,bufferSize);
-                tree_->Branch("jetorigin_partonFlavor", &jetorigin_partonFlavor , "jetorigin_partonFlavor/F" , bufferSize ) ;
-                tree_->Branch("jetorigin_hadronFlavor", &jetorigin_hadronFlavor , "jetorigin_hadronFlavor/F" , bufferSize ) ;
-                tree_->Branch("jetorigin_llpId", &jetorigin_llpId , "jetorigin_llpId/F" , bufferSize ) ;
-                tree_->Branch("jetorigin_llp_mass", &jetorigin_llp_mass , "jetorigin_llp_mass/F" , bufferSize ) ;
-                tree_->Branch("jetorigin_llp_pt", &jetorigin_llp_pt , "jetorigin_llp_pt/F" , bufferSize ) ;
+                jetLabelBranches = makeBranches<0>(tree_,jetLabels);
+                jetoriginBranches = makeBranches<0>(tree_,jetoriginFeatures);
             }
             else
             {
@@ -802,61 +807,6 @@ class NanoXTree
         unsigned int njetorigin;
         int jetorigin_jetIdx[maxEntries_global];
 
-        int jetorigin_isPrompt_E[maxEntries_global];
-        int jetorigin_isPrompt_MU[maxEntries_global];
-        int jetorigin_isPrompt_TAU[maxEntries_global];
-
-        int jetorigin_isPU[maxEntries_global];
-        int jetorigin_isB[maxEntries_global];
-        int jetorigin_isBB[maxEntries_global];
-        int jetorigin_isGBB[maxEntries_global];
-        int jetorigin_isLeptonic_B[maxEntries_global];
-        int jetorigin_isLeptonic_C[maxEntries_global];
-        int jetorigin_isC[maxEntries_global];
-        int jetorigin_isCC[maxEntries_global];
-        int jetorigin_isGCC[maxEntries_global];
-        int jetorigin_isS[maxEntries_global];
-        int jetorigin_isUD[maxEntries_global];
-        int jetorigin_isG[maxEntries_global];
-
-        int jetorigin_isLLP_RAD[maxEntries_global];
-        int jetorigin_isLLP_Q[maxEntries_global];
-        int jetorigin_isLLP_QQ[maxEntries_global];
-
-        int jetorigin_isLLP_B[maxEntries_global];
-        int jetorigin_isLLP_BB[maxEntries_global];
-
-        int jetorigin_isLLP_MU[maxEntries_global];
-        int jetorigin_isLLP_QMU[maxEntries_global];
-        int jetorigin_isLLP_QQMU[maxEntries_global];
-
-        int jetorigin_isLLP_BMU[maxEntries_global];
-        int jetorigin_isLLP_BBMU[maxEntries_global];
-
-        int jetorigin_isLLP_E[maxEntries_global];
-        int jetorigin_isLLP_QE[maxEntries_global];
-        int jetorigin_isLLP_QQE[maxEntries_global];
-
-        int jetorigin_isLLP_BE[maxEntries_global];
-        int jetorigin_isLLP_BBE[maxEntries_global];
-
-        int jetorigin_isLLP_TAU[maxEntries_global];
-        int jetorigin_isLLP_QTAU[maxEntries_global];
-        int jetorigin_isLLP_QQTAU[maxEntries_global];
-
-        int jetorigin_isUndefined[maxEntries_global];
-
-        float jetorigin_displacement[maxEntries_global];
-        float jetorigin_decay_angle[maxEntries_global];
-        float jetorigin_displacement_xy[maxEntries_global];
-        float jetorigin_displacement_z[maxEntries_global];
-        float jetorigin_betagamma[maxEntries_global];
-        int   jetorigin_partonFlavor[maxEntries_global];
-        int   jetorigin_hadronFlavor[maxEntries_global];
-        int   jetorigin_llpId[maxEntries_global];
-        float jetorigin_llp_mass[maxEntries_global];
-        float jetorigin_llp_pt[maxEntries_global];
-
         unsigned int nlength;
         int length_cpf[maxEntries_global];
         int length_npf[maxEntries_global];
@@ -876,6 +826,13 @@ class NanoXTree
         float global_phi[maxEntries_global];
 
         std::vector<std::shared_ptr<BranchData>> globalBranches;
+        
+        std::vector<std::shared_ptr<BranchData>> jetoriginBranches;
+        std::vector<std::shared_ptr<BranchData>> jetLabelBranches;
+        
+        std::unordered_map<std::string,std::shared_ptr<BranchData>> jetoriginBranchMap;
+        std::unordered_map<std::string,std::shared_ptr<BranchData>> jetLabelBranchMap;
+        std::unordered_map<std::string,float> jetPropertiesMapForSelection;
 
         unsigned int ncsv;
         std::vector<std::shared_ptr<BranchData>> csvBranches;
@@ -907,54 +864,11 @@ class NanoXTree
         typedef exprtk::expression<float> Expression;
         typedef exprtk::parser<float> Parser;
 
-        float isPrompt_E;
-        float isPrompt_MU;
-        float isPrompt_TAU;
-
-        float isB;
-        float isBB;
-        float isGBB;
-        float isLeptonic_B;
-        float isLeptonic_C;
-        float isC;
-        float isCC;
-        float isGCC;
-        float isS;
-        float isUD;
-        float isG;
-
-        float isLLP_RAD;
-        float isLLP_Q;
-        float isLLP_QQ;
-
-        float isLLP_B;
-        float isLLP_BB;
-
-        float isLLP_MU;
-        float isLLP_QMU;
-        float isLLP_QQMU;
-
-        float isLLP_BMU;
-        float isLLP_BBMU;
-
-        float isLLP_E;
-        float isLLP_QE;
-        float isLLP_QQE;
-
-        float isLLP_BE;
-        float isLLP_BBE;
-
-        float isLLP_TAU;
-        float isLLP_QTAU;
-        float isLLP_QQTAU;
-
-        float isPU;
-
         float isPrompt_ANY;
         float isB_ANY;
         float isC_ANY;
+        float isUDSG_ANY;
         float isLLP_ANY;
-
 
         float rand;
         float pt;
@@ -962,7 +876,6 @@ class NanoXTree
         float phi;
 
         float ctau;
-        float dxy;
 
         Parser parser_;
         SymbolTable symbolTable_;
@@ -1028,68 +941,20 @@ class NanoXTree
             {
                 tree_->SetBranchAddress("njetorigin",&njetorigin);
                 tree_->SetBranchAddress("jetorigin_jetIdx",&jetorigin_jetIdx);
-
-                tree_->SetBranchAddress("jetorigin_displacement",&jetorigin_displacement);
-                tree_->SetBranchAddress("jetorigin_decay_angle",&jetorigin_decay_angle);
-                tree_->SetBranchAddress("jetorigin_displacement_xy" , &jetorigin_displacement_xy);
-                tree_->SetBranchAddress("jetorigin_displacement_z" , &jetorigin_displacement_z);
-                tree_->SetBranchAddress("jetorigin_betagamma", &jetorigin_betagamma);
-
-                tree_->SetBranchAddress("jetorigin_hadronFlavor", &jetorigin_hadronFlavor);
-                tree_->SetBranchAddress("jetorigin_partonFlavor", &jetorigin_partonFlavor);
-
-                tree_->SetBranchAddress("jetorigin_llpId", &jetorigin_llpId);
-                tree_->SetBranchAddress("jetorigin_llp_pt", &jetorigin_llp_pt);
-                tree_->SetBranchAddress("jetorigin_llp_mass", &jetorigin_llp_mass);
-
-                tree_->SetBranchAddress("jetorigin_partonFlavor", &jetorigin_partonFlavor);
-                tree_->SetBranchAddress("jetorigin_hadronFlavor", &jetorigin_hadronFlavor);
-                tree_->SetBranchAddress("jetorigin_llpId", &jetorigin_llpId);
-                tree_->SetBranchAddress("jetorigin_llp_mass", &jetorigin_llp_mass);
-                tree_->SetBranchAddress("jetorigin_llp_pt", &jetorigin_llp_pt);
-
-                tree_->SetBranchAddress("jetorigin_isPrompt_E",&jetorigin_isPrompt_E);
-                tree_->SetBranchAddress("jetorigin_isPrompt_MU",&jetorigin_isPrompt_MU);
-                tree_->SetBranchAddress("jetorigin_isPrompt_TAU",&jetorigin_isPrompt_TAU);
-
-                tree_->SetBranchAddress("jetorigin_isUndefined",&jetorigin_isUndefined);
-                tree_->SetBranchAddress("jetorigin_isB",&jetorigin_isB);
-                tree_->SetBranchAddress("jetorigin_isBB",&jetorigin_isBB);
-                tree_->SetBranchAddress("jetorigin_isGBB",&jetorigin_isGBB);
-                tree_->SetBranchAddress("jetorigin_isLeptonic_B",&jetorigin_isLeptonic_B);
-                tree_->SetBranchAddress("jetorigin_isLeptonic_C",&jetorigin_isLeptonic_C);
-                tree_->SetBranchAddress("jetorigin_isC",&jetorigin_isC);
-                tree_->SetBranchAddress("jetorigin_isCC",&jetorigin_isCC);
-                tree_->SetBranchAddress("jetorigin_isGCC",&jetorigin_isGCC);
-                tree_->SetBranchAddress("jetorigin_isS",&jetorigin_isS);
-                tree_->SetBranchAddress("jetorigin_isUD",&jetorigin_isUD);
-                tree_->SetBranchAddress("jetorigin_isG",&jetorigin_isG);
-                tree_->SetBranchAddress("jetorigin_isPU",&jetorigin_isPU);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_RAD",&jetorigin_isLLP_RAD);
-                tree_->SetBranchAddress("jetorigin_isLLP_Q",&jetorigin_isLLP_Q);
-                tree_->SetBranchAddress("jetorigin_isLLP_QQ",&jetorigin_isLLP_QQ);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_B",&jetorigin_isLLP_B);
-                tree_->SetBranchAddress("jetorigin_isLLP_BB",&jetorigin_isLLP_BB);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_MU",&jetorigin_isLLP_MU);
-                tree_->SetBranchAddress("jetorigin_isLLP_QMU",&jetorigin_isLLP_QMU);
-                tree_->SetBranchAddress("jetorigin_isLLP_QQMU",&jetorigin_isLLP_QQMU);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_BMU",&jetorigin_isLLP_BMU);
-                tree_->SetBranchAddress("jetorigin_isLLP_BBMU",&jetorigin_isLLP_BBMU);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_E",&jetorigin_isLLP_E);
-                tree_->SetBranchAddress("jetorigin_isLLP_QE",&jetorigin_isLLP_QE);
-                tree_->SetBranchAddress("jetorigin_isLLP_QQE",&jetorigin_isLLP_QQE);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_BE",&jetorigin_isLLP_BE);
-                tree_->SetBranchAddress("jetorigin_isLLP_BBE",&jetorigin_isLLP_BBE);
-
-                tree_->SetBranchAddress("jetorigin_isLLP_TAU",&jetorigin_isLLP_TAU);
-                tree_->SetBranchAddress("jetorigin_isLLP_QTAU",&jetorigin_isLLP_QTAU);
-                tree_->SetBranchAddress("jetorigin_isLLP_QQTAU",&jetorigin_isLLP_QQTAU);
+                
+                jetoriginBranches = branchAddresses<maxEntries_global>(tree_,jetoriginFeatures);
+                jetLabelBranches = branchAddresses<maxEntries_global>(tree_,jetLabels);
+                
+                for (size_t ifeature = 0; ifeature < jetLabels.size(); ++ifeature)
+                {
+                    jetLabelBranchMap[jetLabels[ifeature].name()] = jetLabelBranches[ifeature];
+                    jetPropertiesMapForSelection[jetLabels[ifeature].name()] = 0.; //init
+                }
+                for (size_t ifeature = 0; ifeature < jetoriginFeatures.size(); ++ifeature)
+                {
+                    jetoriginBranchMap[jetoriginFeatures[ifeature].name()] = jetoriginBranches[ifeature];
+                    jetPropertiesMapForSelection[jetoriginFeatures[ifeature].name()] = 0.; //init
+                }
             }
             else
             {
@@ -1140,60 +1005,19 @@ class NanoXTree
             tree_->SetCacheSize(10);
             tree_->SetMaxVirtualSize(16000);
 
-            symbolTable_.add_variable("isPrompt_E",isPrompt_E);
-            symbolTable_.add_variable("isPrompt_MU",isPrompt_MU);
-            symbolTable_.add_variable("isPrompt_TAU",isPrompt_TAU);
-
-            symbolTable_.add_variable("isB",isB);
-            symbolTable_.add_variable("isBB",isBB);
-            symbolTable_.add_variable("isGBB",isGBB);
-            symbolTable_.add_variable("isLeptonic_B",isLeptonic_B);
-            symbolTable_.add_variable("isLeptonic_C",isLeptonic_C);
-
-            symbolTable_.add_variable("isC",isC);
-            symbolTable_.add_variable("isCC",isCC);
-            symbolTable_.add_variable("isGCC",isGCC);
-
-            symbolTable_.add_variable("isS",isS);
-            symbolTable_.add_variable("isUD",isUD);
-            symbolTable_.add_variable("isG",isG);
-
-            symbolTable_.add_variable("isPU",isPU);
-
-            symbolTable_.add_variable("isLLP_RAD" ,isLLP_RAD);
-            symbolTable_.add_variable("isLLP_Q" ,isLLP_Q);
-            symbolTable_.add_variable("isLLP_QQ" ,isLLP_QQ);
-
-            symbolTable_.add_variable("isLLP_B" ,isLLP_B);
-            symbolTable_.add_variable("isLLP_BB" ,isLLP_BB);
-
-
-            symbolTable_.add_variable("isLLP_MU" ,isLLP_MU);
-            symbolTable_.add_variable("isLLP_QMU" ,isLLP_QMU);
-            symbolTable_.add_variable("isLLP_QQMU" ,isLLP_QQMU);
-
-            symbolTable_.add_variable("isLLP_BMU" ,isLLP_BMU);
-            symbolTable_.add_variable("isLLP_BBMU" ,isLLP_BBMU);
-
-            symbolTable_.add_variable("isLLP_E",isLLP_E);
-            symbolTable_.add_variable("isLLP_QE",isLLP_QE);
-            symbolTable_.add_variable("isLLP_QQE",isLLP_QQE);
-
-            symbolTable_.add_variable("isLLP_BE",isLLP_BE);
-            symbolTable_.add_variable("isLLP_BBE",isLLP_BBE);
-
-            symbolTable_.add_variable("isLLP_TAU",isLLP_TAU);
-            symbolTable_.add_variable("isLLP_QTAU",isLLP_QTAU);
-            symbolTable_.add_variable("isLLP_QQTAU",isLLP_QQTAU);
+            for (auto& featureBranchPair: jetPropertiesMapForSelection)
+            {
+                symbolTable_.add_variable(featureBranchPair.first,featureBranchPair.second);
+            }
 
             symbolTable_.add_variable("isPrompt_ANY",isPrompt_ANY);
             symbolTable_.add_variable("isB_ANY",isB_ANY);
             symbolTable_.add_variable("isC_ANY",isC_ANY);
+            symbolTable_.add_variable("isUDSG_ANY",isUDSG_ANY);
             symbolTable_.add_variable("isLLP_ANY",isLLP_ANY);
 
             symbolTable_.add_variable("rand",rand);
             symbolTable_.add_variable("ctau",ctau);
-            symbolTable_.add_variable("dxy",dxy);
 
             symbolTable_.add_variable("pt",pt);
             symbolTable_.add_variable("eta",eta);
@@ -1372,7 +1196,7 @@ class NanoXTree
 
             //ignore jet if reco/gen pt largely disagree -> likely random PU match
             //require minimum of genjet pt of 10 GeV
-            if (addTruth_ and jetorigin_isPU[indexOrigin]==0 and Jet_genJetIdx[jet]>-1 and Jet_genJetIdx[jet]<maxJets)
+            if (addTruth_ and jetLabelBranchMap["jetorigin_isPU"]->getFloat(indexOrigin)<0.5 and Jet_genJetIdx[jet]>-1 and Jet_genJetIdx[jet]<maxJets)
             {
                 if ((GenJet_pt[Jet_genJetIdx[jet]]<5.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
                 {
@@ -1400,10 +1224,12 @@ class NanoXTree
             }
 
 
-            if (Jet_nConstituents[jet]<4) return false;
+            if (Jet_nConstituents[jet]<2) return false;
 
 
-            if (jetorigin_isPrompt_E[indexOrigin]<0.5 and jetorigin_isPrompt_MU[indexOrigin]<0.5 and jetorigin_isPrompt_TAU[indexOrigin]<0.5)
+            if (jetLabelBranchMap["jetorigin_isPrompt_E"]->getFloat(indexOrigin)<0.5 
+                and jetLabelBranchMap["jetorigin_isPrompt_MU"]->getFloat(indexOrigin)<0.5 
+                and jetLabelBranchMap["jetorigin_isPrompt_TAU"]->getFloat(indexOrigin)<0.5)
             {
                 TLorentzVector jetP4(0,0,0,0);
                 jetP4.SetPtEtaPhiM(Jet_pt[jet],Jet_eta[jet],Jet_phi[jet],0.);
@@ -1440,86 +1266,76 @@ class NanoXTree
 
             if (addTruth_)
             {
-                if (jetorigin_isUndefined[indexOrigin]>0.5)
+                if (jetLabelBranchMap["jetorigin_isUndefined"]->getFloat(indexOrigin)>0.5)
                 {
                     return false;
                 }
-
-                isPrompt_E = jetorigin_isPrompt_E[indexOrigin];
-                isPrompt_MU = jetorigin_isPrompt_MU[indexOrigin];
-                isPrompt_TAU = jetorigin_isPrompt_TAU[indexOrigin];
-
-                isB = jetorigin_isB[indexOrigin];
-                isBB = jetorigin_isBB[indexOrigin];
-                isGBB = jetorigin_isGBB[indexOrigin];
-                isLeptonic_B = jetorigin_isLeptonic_B[indexOrigin];
-                isLeptonic_C = jetorigin_isLeptonic_C[indexOrigin];
-
-                isC = jetorigin_isC[indexOrigin];
-                isCC = jetorigin_isCC[indexOrigin];
-                isGCC = jetorigin_isGCC[indexOrigin];
-
-                isS = jetorigin_isS[indexOrigin];
-                isUD = jetorigin_isUD[indexOrigin];
-                isG = jetorigin_isG[indexOrigin];
-
-                isLLP_RAD= jetorigin_isLLP_RAD[indexOrigin];
-                isLLP_Q= jetorigin_isLLP_Q[indexOrigin];
-                isLLP_QQ= jetorigin_isLLP_QQ[indexOrigin];
-
-                isLLP_B= jetorigin_isLLP_B[indexOrigin];
-                isLLP_BB= jetorigin_isLLP_BB[indexOrigin];
-
-                isLLP_E= jetorigin_isLLP_E[indexOrigin];
-                isLLP_QE= jetorigin_isLLP_QE[indexOrigin];
-                isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];
-
-                isLLP_BE= jetorigin_isLLP_BE[indexOrigin];
-                isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];
-
-                isLLP_MU= jetorigin_isLLP_MU[indexOrigin];
-                isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];
-                isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];
-
-                isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];
-                isLLP_BBMU= jetorigin_isLLP_BBMU[indexOrigin];
-
-                isLLP_TAU= jetorigin_isLLP_TAU[indexOrigin];
-                isLLP_QTAU= jetorigin_isLLP_QTAU[indexOrigin];
-                isLLP_QQTAU= jetorigin_isLLP_QQTAU[indexOrigin];
-
-
-
-                isPU = jetorigin_isPU[indexOrigin];
-
-                isPrompt_ANY = isPrompt_E+isPrompt_MU+isPrompt_TAU;
-                isB_ANY = isB+isBB+isGBB+isLeptonic_B+isLeptonic_C;
-                isC_ANY = isC+isCC+isGCC;
-                isLLP_ANY = isLLP_RAD+isLLP_Q+isLLP_QQ+isLLP_B+isLLP_BB
-                            +isLLP_MU+isLLP_QMU+isLLP_QQMU
-                            +isLLP_BMU+isLLP_BBMU
-                            +isLLP_E+isLLP_QE+isLLP_QQE
-                            +isLLP_BE+isLLP_BBE
-                            +isLLP_TAU+isLLP_QTAU+isLLP_QQTAU;
-
-
-                if ((isPrompt_ANY
-                    +isB_ANY+isC_ANY
-                    +isS+isUD+isG+isPU
-                    +isLLP_ANY+jetorigin_isUndefined[indexOrigin])!=1)
+                
+                for (size_t ifeature = 0; ifeature < jetoriginFeatures.size(); ++ifeature)
                 {
-                    std::cout<<"Error - label sum is not 1"<<std::endl;
-                    std::cout<<"  isPrompt_E: "<<isPrompt_E<<", isPrompt_MU: "<<isPrompt_MU<<", isPrompt_TAU: "<<isPrompt_TAU<<std::endl;
-                    std::cout<<"  isB: "<<isB<<", isBB: "<<isBB<<", isGBB: "<<isGBB<<", isLeptonic_B: "<<isLeptonic_B<<", isLeptonic_C: "<<isLeptonic_C<<std::endl;
-                    std::cout<<"  isC: "<<isC<<", isCC: "<<isCC<<", isGCC: "<<isGCC<<", isS: "<<isS<<", isUD: "<<isUD<<", isG: "<<isG<<", isPU: "<<isPU<<std::endl;
-                    std::cout<<"  isLLP_RAD: "<<isLLP_RAD<<", isLLP_Q: "<<isLLP_Q<<", isLLP_QQ: "<<isLLP_QQ<<", isLL_B: "<<isLLP_B<<", isLLP_BB: "<<isLLP_BB<<std::endl;
-                    std::cout<<"  isLLP_MU: "<<isLLP_MU<<", isLLP_QMU: "<<isLLP_QMU<<", isLLP_QQMU: "<<isLLP_QQMU<<std::endl;
-                    std::cout<<"  isLLP_BMU: "<<isLLP_BMU<<", isLLP_BBMU: "<<isLLP_BBMU<<std::endl;
-                    std::cout<<"  isLLP_E: "<<isLLP_E<<", isLLP_QE: "<<isLLP_QE<<", isLLP_QQE: "<<isLLP_QQE<<std::endl;
-                    std::cout<<"  isLLP_BE: "<<isLLP_BE<<", isLLP_BBE: "<<isLLP_BBE<<std::endl;
-                    std::cout<<"  isLLP_TAU: "<<isLLP_TAU<<", isLLP_QTAU: "<<isLLP_QTAU<<", isLLP_QQTAU: "<<isLLP_QQTAU<<std::endl;
+                    const auto name = jetoriginFeatures[ifeature].name();
+                    jetPropertiesMapForSelection[name] = jetoriginBranchMap[name]->getFloat(indexOrigin);
+                }
+                
+                isPrompt_ANY = 0;
+                isB_ANY = 0;
+                isC_ANY = 0;
+                isUDSG_ANY = 0;
+                isLLP_ANY = 0;
+                
+                const static std::regex regexPrompt("jetorigin_isPrompt_\\S*");
+                const static std::regex regexB("jetorigin_isB\\S*");
+                const static std::regex regexC("jetorigin_isC\\S*");
+                const static std::regex regexLLP("jetorigin_isLLP_\\S*");
+                
+                for (size_t ifeature = 0; ifeature < jetLabels.size(); ++ifeature)
+                {
+                    const auto name = jetLabels[ifeature].name();
+                    float value = jetLabelBranchMap[name]->getFloat(indexOrigin);
+                    jetPropertiesMapForSelection[name] = value;
+                   
+                    if (std::regex_match(name,regexPrompt))
+                    {
+                        isPrompt_ANY+=value;
+                    }
+                    if (std::regex_match(name,regexB) or name=="jetorigin_isLeptonic_B")
+                    {
+                        isB_ANY+=value;
+                    }
+                    if (std::regex_match(name,regexC) or name=="jetorigin_isLeptonic_C")
+                    {
+                        isC_ANY+=value;
+                    }
+                    if (name=="jetorigin_isUD" or name=="jetorigin_isS" or name=="jetorigin_isG")
+                    {
+                        isUDSG_ANY+=value;
+                    }
+                    if (std::regex_match(name,regexLLP))
+                    {
+                        isLLP_ANY+=value;
+                    }
+                }
 
-                    std::cout<<"  isLLP_ANY: "<<isLLP_ANY<<", isUndefined: "<<jetorigin_isUndefined[jet]<<std::endl;
+                float isANY = isPrompt_ANY
+                            +isB_ANY+isC_ANY
+                            +isUDSG_ANY+jetPropertiesMapForSelection["jetorigin_isPU"]
+                            +isLLP_ANY+jetPropertiesMapForSelection["jetorigin_isUndefined"];
+            
+                if (isANY<0.5 or isANY>1.5)
+                {
+                    std::cout<<"Error - label sum is not 1 (="<<isANY<<")"<<std::endl;
+                    for (size_t ifeature = 0; ifeature < jetLabels.size(); ++ifeature)
+                    {
+                        const auto name = jetLabels[ifeature].name();
+                        std::cout<<"   "<<name<<": "<<jetPropertiesMapForSelection[name]<<std::endl;
+                    }
+                    std::cout<<"   isPrompt_ANY: "<<isPrompt_ANY<<std::endl;
+                    std::cout<<"   isB_ANY: "<<isB_ANY<<std::endl;
+                    std::cout<<"   isC_ANY: "<<isC_ANY<<std::endl;
+                    std::cout<<"   isUDSG_ANY: "<<isUDSG_ANY<<std::endl;
+                    std::cout<<"   isLLP_ANY: "<<isLLP_ANY<<std::endl;
+                    
+                    
                     return false;
                 }
 
@@ -1531,54 +1347,26 @@ class NanoXTree
                     return false;
                 }
 
-                isPrompt_E = 0;
-                isPrompt_MU = 0;
-                isPrompt_TAU = 0;
-
-                isB = 0;
-                isBB = 0;
-                isGBB = 0;
-                isLeptonic_B = 0;
-                isLeptonic_C = 0;
-                isC = 0;
-                isCC = 0;
-                isGCC = 0;
-                isS = 0;
-                isUD = 0;
-                isG = 0;
-
-                isLLP_RAD = 0;
-                isLLP_Q = 0;
-                isLLP_QQ = 0;
-
-                isLLP_B = 0;
-                isLLP_BB = 0;
-
-                isLLP_MU = 0;
-                isLLP_QMU = 0;
-                isLLP_QQMU = 0;
-
-                isLLP_BMU = 0;
-                isLLP_BBMU = 0;
-
-                isLLP_E = 0;
-                isLLP_QE = 0;
-                isLLP_QQE = 0;
-
-                isLLP_BE = 0;
-                isLLP_BBE = 0;
-
-                isLLP_TAU = 0;
-                isLLP_QTAU = 0;
-                isLLP_QQTAU = 0;
-
-                isPU = 0;
+                for (size_t ifeature = 0; ifeature < jetoriginFeatures.size(); ++ifeature)
+                {
+                    const auto name = jetoriginFeatures[ifeature].name();
+                    jetPropertiesMapForSelection[name] = 0;
+                }
+                for (size_t ifeature = 0; ifeature < jetLabels.size(); ++ifeature)
+                {
+                    const auto name = jetLabels[ifeature].name();
+                    jetPropertiesMapForSelection[name] = 0;
+                }
+                isPrompt_ANY = 0;
+                isB_ANY = 0;
+                isC_ANY = 0;
+                isUDSG_ANY = 0;
+                isLLP_ANY = 0;
             }
 
 
             rand = uniform_dist_(randomGenerator_);
             ctau = -10;
-            dxy = jetorigin_displacement_xy[indexOrigin];
             pt = global_pt[indexGlobal];
             eta = global_eta[indexGlobal];
             phi = global_phi[indexGlobal];
@@ -1625,48 +1413,11 @@ class NanoXTree
             }
 
             if (indexOrigin==-1) return -1;
-
-            if  (jetorigin_isPrompt_E[indexOrigin]>0.5) return 0;
-            if  (jetorigin_isPrompt_MU[indexOrigin]>0.5) return 1;
-            if  (jetorigin_isPrompt_TAU[indexOrigin]>0.5) return 2;
-
-            if  (jetorigin_isB[indexOrigin]>0.5) return 3;
-            if  (jetorigin_isBB[indexOrigin]>0.5) return 4;
-            if  (jetorigin_isGBB[indexOrigin]>0.5) return 5;
-            if  (jetorigin_isLeptonic_B[indexOrigin]>0.5) return 6;
-            if  (jetorigin_isLeptonic_C[indexOrigin]>0.5) return 7;
-            if  (jetorigin_isC[indexOrigin]>0.5) return 8;
-            if  (jetorigin_isCC[indexOrigin]>0.5) return 9;
-            if  (jetorigin_isGCC[indexOrigin]>0.5) return 10;
-            if  (jetorigin_isS[indexOrigin]>0.5) return 11;
-            if  (jetorigin_isUD[indexOrigin]>0.5) return 12;
-            if  (jetorigin_isG[indexOrigin]>0.5) return 13;
-            if  (jetorigin_isPU[indexOrigin]>0.5) return 14;
-
-            if  (jetorigin_isLLP_RAD[indexOrigin]>0.5) return 15;
-            if  (jetorigin_isLLP_Q[indexOrigin]>0.5) return 16;
-            if  (jetorigin_isLLP_QQ[indexOrigin]>0.5) return 17;
-
-            if  (jetorigin_isLLP_B[indexOrigin]>0.5) return 18;
-            if  (jetorigin_isLLP_BB[indexOrigin]>0.5) return 19;
-
-            if  (jetorigin_isLLP_MU[indexOrigin]>0.5) return 20;
-            if  (jetorigin_isLLP_QMU[indexOrigin]>0.5) return 21;
-            if  (jetorigin_isLLP_QQMU[indexOrigin]>0.5) return 22;
-
-            if  (jetorigin_isLLP_BMU[indexOrigin]>0.5) return 23;
-            if  (jetorigin_isLLP_BBMU[indexOrigin]>0.5) return 24;
-
-            if  (jetorigin_isLLP_E[indexOrigin]>0.5) return 25;
-            if  (jetorigin_isLLP_QE[indexOrigin]>0.5) return 26;
-            if  (jetorigin_isLLP_QQE[indexOrigin]>0.5) return 27;
-
-            if  (jetorigin_isLLP_BE[indexOrigin]>0.5) return 28;
-            if  (jetorigin_isLLP_BBE[indexOrigin]>0.5) return 29;
-
-            if  (jetorigin_isLLP_TAU[indexOrigin]>0.5) return 30;
-            if  (jetorigin_isLLP_QTAU[indexOrigin]>0.5) return 31;
-            if  (jetorigin_isLLP_QQTAU[indexOrigin]>0.5) return 32;
+            
+            for (size_t ifeature = 0; ifeature < jetLabelBranches.size(); ++ifeature)
+            {
+                if (jetLabelBranches[ifeature]->getFloat(indexOrigin)>0.5) return ifeature;
+            }
 
             return -1;
         }
@@ -1698,63 +1449,11 @@ class NanoXTree
 
             if (addTruth_)
             {
-                unpackedTree.jetorigin_displacement = jetorigin_displacement[indexOrigin];
-                unpackedTree.jetorigin_displacement_xy = jetorigin_displacement_xy[indexOrigin];
-                unpackedTree.jetorigin_displacement_z = jetorigin_displacement_z[indexOrigin];
-                unpackedTree.jetorigin_ctau = ctau;
-                unpackedTree.jetorigin_decay_angle = jetorigin_decay_angle[indexOrigin];
-                unpackedTree.jetorigin_betagamma = jetorigin_betagamma[indexOrigin];
-
-                unpackedTree.jetorigin_partonFlavor = jetorigin_partonFlavor[indexOrigin];
-                unpackedTree.jetorigin_hadronFlavor = jetorigin_hadronFlavor[indexOrigin];
-
-                unpackedTree.jetorigin_llpId = jetorigin_llpId[indexOrigin];
-                unpackedTree.jetorigin_llp_mass = jetorigin_llp_mass[indexOrigin];
-                unpackedTree.jetorigin_llp_pt = jetorigin_llp_pt[indexOrigin];
-
-                unpackedTree.jetorigin_isPrompt_E = jetorigin_isPrompt_E[indexOrigin];
-                unpackedTree.jetorigin_isPrompt_MU = jetorigin_isPrompt_MU[indexOrigin];
-                unpackedTree.jetorigin_isPrompt_TAU = jetorigin_isPrompt_TAU[indexOrigin];
-
-                unpackedTree.jetorigin_isUndefined = jetorigin_isUndefined[indexOrigin];
-                unpackedTree.jetorigin_isB = jetorigin_isB[indexOrigin];
-                unpackedTree.jetorigin_isBB = jetorigin_isBB[indexOrigin];
-                unpackedTree.jetorigin_isGBB = jetorigin_isGBB[indexOrigin];
-                unpackedTree.jetorigin_isLeptonic_B = jetorigin_isLeptonic_B[indexOrigin];
-                unpackedTree.jetorigin_isLeptonic_C = jetorigin_isLeptonic_C[indexOrigin];
-                unpackedTree.jetorigin_isC = jetorigin_isC[indexOrigin];
-                unpackedTree.jetorigin_isCC = jetorigin_isCC[indexOrigin];
-                unpackedTree.jetorigin_isGCC = jetorigin_isGCC[indexOrigin];
-                unpackedTree.jetorigin_isS = jetorigin_isS[indexOrigin];
-                unpackedTree.jetorigin_isUD = jetorigin_isUD[indexOrigin];
-                unpackedTree.jetorigin_isG = jetorigin_isG[indexOrigin];
-                unpackedTree.jetorigin_isPU = jetorigin_isPU[indexOrigin];
-
-
-                unpackedTree.jetorigin_isLLP_RAD= jetorigin_isLLP_RAD[indexOrigin];
-                unpackedTree.jetorigin_isLLP_Q= jetorigin_isLLP_Q[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQ= jetorigin_isLLP_QQ[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_B= jetorigin_isLLP_B[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BB= jetorigin_isLLP_BB[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_MU= jetorigin_isLLP_MU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QMU= jetorigin_isLLP_QMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQMU= jetorigin_isLLP_QQMU[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_BMU= jetorigin_isLLP_BMU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BBMU= jetorigin_isLLP_BBMU[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_E= jetorigin_isLLP_E[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QE= jetorigin_isLLP_QE[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQE= jetorigin_isLLP_QQE[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_BE= jetorigin_isLLP_BE[indexOrigin];
-                unpackedTree.jetorigin_isLLP_BBE= jetorigin_isLLP_BBE[indexOrigin];
-
-                unpackedTree.jetorigin_isLLP_TAU= jetorigin_isLLP_TAU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QTAU= jetorigin_isLLP_QTAU[indexOrigin];
-                unpackedTree.jetorigin_isLLP_QQTAU= jetorigin_isLLP_QQTAU[indexOrigin];
+                if (unpackedTree.jetLabelBranches.size()!=jetLabelBranches.size()) throw std::runtime_error("Jet label branches have different size! "+std::to_string(unpackedTree.jetLabelBranches.size())+"!="+std::to_string(jetLabelBranches.size()));
+                for (size_t ifeature = 0; ifeature < jetLabelBranches.size(); ++ifeature)
+                {
+                    unpackedTree.jetLabelBranches[ifeature]->setFloat(0,jetLabelBranches[ifeature]->getFloat(indexGlobal));
+                }
 
             }
             else
@@ -2165,7 +1864,6 @@ int main(int argc, char **argv)
     std::cout<<"Number of independent inputs: "<<trees.size()<<std::endl;
     std::cout<<"Total number of events: "<<total_entries<<std::endl;
 
-    constexpr int nClasses = 33;
 
     std::vector<std::unique_ptr<UnpackedTree>> unpackedTreesTrain;
     std::vector<std::vector<int>> eventsPerClassPerFileTrain(nClasses,std::vector<int>(nOutputs,0));
@@ -2384,3 +2082,5 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+

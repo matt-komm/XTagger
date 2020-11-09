@@ -3,11 +3,11 @@ import sys
 import re
 import shutil
 
-inputPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/inputs/2016"
+inputPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/inputs/2018"
 
 
-outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_mixed/2016"
-outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_mixed/2016"
+outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_mixed/2018"
+outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_mixed/2018"
 
 configs = [
     {
@@ -54,7 +54,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e04.txt"
@@ -64,7 +64,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e03.txt"
@@ -74,7 +74,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e02.txt"
@@ -84,7 +84,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e01.txt"
@@ -94,7 +94,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e00.txt"
@@ -104,7 +104,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-01.txt"
@@ -114,7 +114,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-02.txt"
@@ -124,7 +124,7 @@ configs = [
         "maxFiles":-1,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-2.)",
+            "#select (dxy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNLGun.txt"
