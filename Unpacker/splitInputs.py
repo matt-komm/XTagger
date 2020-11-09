@@ -3,11 +3,11 @@ import sys
 import re
 import shutil
 
-inputPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/inputs/2018"
+inputPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/inputs_201107/2016"
 
 
-outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_mixed/2018"
-outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_mixed/2018"
+outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_201107_mixed/2016"
+outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_201107_mixed/2016"
 
 configs = [
     {
@@ -17,9 +17,9 @@ configs = [
         "header":[
             #"#cap 2000000",
             "#cap 10000000",
-            "#select ((isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (isG<0.5)",
-            "#select ((isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (isUD<0.5)",
-            "#select ((isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (isPU<0.5)",
+            "#select ((jetorigin_isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isG<0.5)",
+            "#select ((jetorigin_isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isUD<0.5)",
+            "#select ((jetorigin_isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (jetorigin_isPU<0.5)",
         ],
         "output":"TTJets.txt"
     },
@@ -30,9 +30,9 @@ configs = [
         "header":[
             #"#cap 3000000",
             "#cap 10000000",
-            "#select ((isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (isG<0.5)",
-            "#select ((isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (isUD<0.5)",
-            "#select ((isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (isPU<0.5)",
+            "#select ((jetorigin_isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isG<0.5)",
+            "#select ((jetorigin_isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isUD<0.5)",
+            "#select ((jetorigin_isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (jetorigin_isPU<0.5)",
         ],
         "output":"QCD.txt"
     },
@@ -43,9 +43,9 @@ configs = [
         "header":[
             #"#cap 5000000",
             "#cap 100000000",
-            "#select ((isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (isG<0.5)",
-            "#select ((isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (isUD<0.5)",
-            "#select ((isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (isPU<0.5)",
+            "#select ((jetorigin_isG>0.5)*(0.5+0.2/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isG<0.5)",
+            "#select ((jetorigin_isUD>0.5)*(0.5/(1+exp(4*(log(pt)-log(30))))<rand)) + (jetorigin_isUD<0.5)",
+            "#select ((jetorigin_isPU>0.5)*(0.95/(1+exp(4*(log(pt)-log(20))))<rand)) + (jetorigin_isPU<0.5)",
         ],
         "output":"WJets.txt"
     },
@@ -54,7 +54,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e04.txt"
@@ -64,7 +64,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e03.txt"
@@ -74,7 +74,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e02.txt"
@@ -84,7 +84,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e01.txt"
@@ -94,7 +94,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e00.txt"
@@ -104,7 +104,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-01.txt"
@@ -114,7 +114,7 @@ configs = [
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNL_all_ctau1p0e-02.txt"
@@ -124,7 +124,7 @@ configs = [
         "maxFiles":-1,
         "trainFraction": 1,
         "header":[
-            "#select (dxy>-3.)",
+            "#select (jetorigin_displacement_xy>-3.)",
             "#select ((isLLP_ANY)>0.5)"
         ],
         "output":"HNLGun.txt"

@@ -1454,6 +1454,12 @@ class NanoXTree
                 {
                     unpackedTree.jetLabelBranches[ifeature]->setFloat(0,jetLabelBranches[ifeature]->getFloat(indexGlobal));
                 }
+                
+                if (unpackedTree.jetoriginBranches.size()!=jetoriginBranches.size()) throw std::runtime_error("Jet origin branches have different size! "+std::to_string(unpackedTree.jetoriginBranches.size())+"!="+std::to_string(jetoriginBranches.size()));
+                for (size_t ifeature = 0; ifeature < jetoriginBranches.size(); ++ifeature)
+                {
+                    unpackedTree.jetoriginBranches[ifeature]->setFloat(0,jetoriginBranches[ifeature]->getFloat(indexGlobal));
+                }
 
             }
             else
