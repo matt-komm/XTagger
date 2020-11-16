@@ -257,10 +257,27 @@ std::shared_ptr<BranchData> BranchData::branchAddress(TTree* tree, const std::st
 }
 
 static const std::vector<Feature> globalFeatures{
+    Feature("global_pt"),
+    Feature("global_eta"),
+    Feature("global_phi"),
     Feature("global_mass"),
+    Feature("global_energy"),
+    
     Feature("global_area"),
+
+    Feature("global_beta"),
+    Feature("global_dR2Mean"),
+    Feature("global_frac01"),
+    Feature("global_frac02"),
+    Feature("global_frac03"),
+    Feature("global_frac04"),
+
+    Feature("global_jetR"),
+    Feature("global_jetRchg"),
+
     Feature("global_n60",Feature::Int),
     Feature("global_n90",Feature::Int),
+    
     Feature("global_chargedEmEnergyFraction"),
     Feature("global_chargedHadronEnergyFraction"),
     Feature("global_chargedMuEnergyFraction"),
@@ -269,39 +286,37 @@ static const std::vector<Feature> globalFeatures{
     Feature("global_tau1"),
     Feature("global_tau2"),
     Feature("global_tau3"),
-
+    
     Feature("global_relMassDropMassAK"),
     Feature("global_relMassDropMassCA"),
     Feature("global_relSoftDropMassAK"),
     Feature("global_relSoftDropMassCA"),
-
+    
     Feature("global_thrust"),
     Feature("global_sphericity"),
     Feature("global_circularity"),
     Feature("global_isotropy"),
     Feature("global_eventShapeC"),
     Feature("global_eventShapeD"),
-
-    Feature("global_beta"),
-    Feature("global_dR2Mean"),
-    Feature("global_frac01"),
-    Feature("global_frac02"),
-    Feature("global_frac03"),
-    Feature("global_frac04"),
-    Feature("global_jetR"),
-    Feature("global_jetRchg"),
+    
+    Feature("global_numberCpf",Feature::Int),
+    Feature("global_numberNpf",Feature::Int),
+    Feature("global_numberSv",Feature::Int),
+    Feature("global_numberSvAdapted",Feature::Int),
+    Feature("global_numberMuon",Feature::Int),
+    Feature("global_numberElectron",Feature::Int)
 };
 
 static const std::vector<Feature> csvFeatures{
     Feature("csv_trackSumJetEtRatio"),
     Feature("csv_trackSumJetDeltaR"),
-    Feature("csv_vertexCategory"),
+    Feature("csv_vertexCategory",Feature::Int),
     Feature("csv_trackSip2dValAboveCharm"),
     Feature("csv_trackSip2dSigAboveCharm"),
     Feature("csv_trackSip3dValAboveCharm"),
     Feature("csv_trackSip3dSigAboveCharm"),
-    Feature("csv_jetNSelectedTracks",Feature::Int),
-    Feature("csv_jetNTracksEtaRel",Feature::Int)
+    Feature("csv_jetNTracksEtaRel",Feature::Int),
+    Feature("csv_jetNSelectedTracks",Feature::Int)
 };
 
 
@@ -309,7 +324,7 @@ static const std::vector<Feature> cpfFeatures{
     Feature("cpf_ptrel"),
     Feature("cpf_deta"),
     Feature("cpf_dphi"),
-    //Feature("cpf_deltaR"),
+    Feature("cpf_deltaR"),
     
     Feature("cpf_px"),
     Feature("cpf_py"),
@@ -328,23 +343,34 @@ static const std::vector<Feature> cpfFeatures{
     Feature("cpf_trackJetDistVal"),
     Feature("cpf_trackJetDistSig"),
     Feature("cpf_drminsv"),
-    Feature("cpf_vertex_association"),
+    Feature("cpf_vertex_association",Feature::Int),
     Feature("cpf_fromPV"),
     Feature("cpf_puppi_weight"),
     Feature("cpf_track_chi2"),
     Feature("cpf_track_quality"),
-    //Feature("cpf_track_numberOfValidPixelHits", Feature::Int),
-    //Feature("cpf_track_pixelLayersWithMeasurement", Feature::Int),
-    //Feature("cpf_track_numberOfValidStripHits", Feature::Int),
-    //Feature("cpf_track_stripLayersWithMeasurement", Feature::Int),
+    Feature("cpf_track_numberOfValidPixelHits",Feature::Int),
+    Feature("cpf_track_pixelLayersWithMeasurement",Feature::Int),
+    Feature("cpf_track_numberOfValidStripHits",Feature::Int),
+    Feature("cpf_track_stripLayersWithMeasurement",Feature::Int),
     Feature("cpf_relmassdrop"),
+    
+    Feature("cpf_trackSip2dValSV"),
+    Feature("cpf_trackSip2dSigSV"),
+    Feature("cpf_trackSip3dValSV"),
+    Feature("cpf_trackSip3dSigSV"),
 
-    Feature("cpf_matchedMuon", Feature::Int),
-    Feature("cpf_matchedElectron", Feature::Int),
-    Feature("cpf_matchedSV", Feature::Int),
-    Feature("cpf_track_ndof", Feature::Int),
+    Feature("cpf_trackSip2dValSV_adapted"),
+    Feature("cpf_trackSip2dSigSV_adapted"),
+    Feature("cpf_trackSip3dValSV_adapted"),
+    Feature("cpf_trackSip3dSigSV_adapted"),
 
-    //Feature("cpf_dZmin")
+    Feature("cpf_matchedMuon",Feature::Int),
+    Feature("cpf_matchedElectron",Feature::Int),
+    Feature("cpf_matchedSV",Feature::Int),
+    Feature("cpf_matchedSV_adapted",Feature::Int),
+    Feature("cpf_track_ndof",Feature::Int),
+
+    Feature("cpf_dZmin")
 };
 
 static const std::vector<Feature> npfFeatures{
@@ -357,7 +383,7 @@ static const std::vector<Feature> npfFeatures{
     Feature("npf_py"),
     Feature("npf_pz"),
     
-    Feature("npf_isGamma"),
+    Feature("npf_isGamma",Feature::Int),
     Feature("npf_hcal_fraction"),
     Feature("npf_drminsv"),
     Feature("npf_puppi_weight"),
@@ -371,7 +397,7 @@ static const std::vector<Feature> svFeatures{
     Feature("sv_dphi"),
     Feature("sv_deltaR"),
     Feature("sv_mass"),
-    Feature("sv_ntracks"),
+    Feature("sv_ntracks",Feature::Int),
     Feature("sv_chi2"),
     Feature("sv_ndof",Feature::Int),
     Feature("sv_dxy"),
@@ -379,7 +405,10 @@ static const std::vector<Feature> svFeatures{
     Feature("sv_d3d"),
     Feature("sv_d3dsig"),
     Feature("sv_costhetasvpv"),
-    Feature("sv_enratio")
+    Feature("sv_enratio"),
+    Feature("sv_vx"),
+    Feature("sv_vy"),
+    Feature("sv_vz")
 };
 
 static const std::vector<Feature> muonFeatures{
@@ -390,24 +419,23 @@ static const std::vector<Feature> muonFeatures{
     Feature("muon_isStandAlone",Feature::Int),
 
     Feature("muon_ptrel"),
-    Feature("muon_EtaRel"),
-    Feature("muon_dphi"),
     Feature("muon_deta"),
-    
+    Feature("muon_dphi"),
     Feature("muon_px"),
     Feature("muon_py"),
     Feature("muon_pz"),
-    
     Feature("muon_charge"),
     Feature("muon_energy"),
+    Feature("muon_et"),
     Feature("muon_deltaR"),
-    Feature("muon_numberOfMatchedStations"),
+    Feature("muon_numberOfMatchedStations",Feature::Int),
 
-    Feature("muon_2dIP"),
-    Feature("muon_2dIPSig"),
-    Feature("muon_3dIP"),
-    Feature("muon_3dIPSig"),
+    Feature("muon_IP2d"),
+    Feature("muon_IP2dSig"),
+    Feature("muon_IP3d"),
+    Feature("muon_IP3dSig"),
 
+    Feature("muon_EtaRel"),
     Feature("muon_dxy"),
     Feature("muon_dxyError"),
     Feature("muon_dxySig"),
@@ -416,7 +444,7 @@ static const std::vector<Feature> muonFeatures{
     Feature("muon_dzSig"),
     Feature("muon_numberOfValidPixelHits",Feature::Int),
     Feature("muon_numberOfpixelLayersWithMeasurement",Feature::Int),
-    Feature("muon_numberOfstripLayersWithMeasurement",Feature::Int),
+    Feature("muon_numberOfstripLayersWithMeasurement",Feature::Int), //that does not help. needs to be discussed.
 
     Feature("muon_chi2"),
     Feature("muon_ndof",Feature::Int),
@@ -435,6 +463,7 @@ static const std::vector<Feature> muonFeatures{
     Feature("muon_Pfpileup03"),
     Feature("muon_sumPfPhotonEt03"),
 
+
     Feature("muon_timeAtIpInOut"),
     Feature("muon_timeAtIpInOutErr"),
     Feature("muon_timeAtIpOutIn")
@@ -451,47 +480,57 @@ static const std::vector<Feature> electronFeatures{
     Feature("electron_charge"),
     Feature("electron_energy"),
     Feature("electron_EtFromCaloEn"),
-    Feature("electron_isEB"),
-    Feature("electron_isEE"),
+    Feature("electron_isEB",Feature::Int), 
+    Feature("electron_isEE",Feature::Int),
     Feature("electron_ecalEnergy"),
-    Feature("electron_isPassConversionVeto"),
+    Feature("electron_isPassConversionVeto",Feature::Int),
     Feature("electron_convDist"),
     Feature("electron_convFlags",Feature::Int),
-
     Feature("electron_convRadius"),
     Feature("electron_hadronicOverEm"),
     Feature("electron_ecalDrivenSeed"),
+    Feature("electron_IP2d"),
+    Feature("electron_IP2dSig"),
+    Feature("electron_IP3d"),
+    Feature("electron_IP3dSig"),
 
-
-    Feature("electron_SC_energy"),
-    Feature("electron_SC_deta"),
-    Feature("electron_SC_dphi"),
-    Feature("electron_SC_et"),
-    Feature("electron_SC_eSuperClusterOverP"),
+    Feature("electron_elecSC_energy"),
+    Feature("electron_elecSC_deta"),
+    Feature("electron_elecSC_dphi"),
+    Feature("electron_elecSC_et"),
+    Feature("electron_elecSC_eSuperClusterOverP"),
     Feature("electron_scPixCharge"),
-    Feature("electron_sigmaEtaEta"),
-    Feature("electron_sigmaIetaIeta"),
-    Feature("electron_sigmaIphiIphi"),
-    Feature("electron_r9"),
     Feature("electron_superClusterFbrem"),
 
-    Feature("electron_2dIP"),
-    Feature("electron_2dIPSig"),
-    Feature("electron_3dIP"),
-    Feature("electron_3dIPSig"),
     Feature("electron_eSeedClusterOverP"),
     Feature("electron_eSeedClusterOverPout"),
     Feature("electron_eSuperClusterOverP"),
 
+    // shower shape
+    Feature("electron_sigmaEtaEta"),
+    Feature("electron_sigmaIetaIeta"),
+    Feature("electron_sigmaIphiIphi"),
+    Feature("electron_e5x5"),
+    Feature("electron_e5x5Rel"),
+    Feature("electron_e1x5Overe5x5"),
+    Feature("electron_e2x5MaxOvere5x5"),
+    Feature("electron_r9"),
+    Feature("electron_hcalOverEcal"),
+    Feature("electron_hcalDepth1OverEcal"),
+    Feature("electron_hcalDepth2OverEcal"),
+
+    // Track-Cluster Matching Attributes
     Feature("electron_deltaEtaEleClusterTrackAtCalo"),
     Feature("electron_deltaEtaSeedClusterTrackAtCalo"),
-    Feature("electron_deltaPhiSeedClusterTrackAtCalo"),
+    Feature("electron_deltaPhiSeedClusterTrackAtCalo"), 
     Feature("electron_deltaEtaSeedClusterTrackAtVtx"),
     Feature("electron_deltaEtaSuperClusterTrackAtVtx"),
     Feature("electron_deltaPhiEleClusterTrackAtCalo"),
     Feature("electron_deltaPhiSuperClusterTrackAtVtx"),
+
     Feature("electron_sCseedEta"),
 
+    // electron gsf variables. 
     Feature("electron_EtaRel"),
     Feature("electron_dxy"),
     Feature("electron_dxyError"),
@@ -499,32 +538,28 @@ static const std::vector<Feature> electronFeatures{
     Feature("electron_dz"),
     Feature("electron_dzError"),
     Feature("electron_dzSig"),
-    Feature("electron_nbOfMissingHits"),
+    Feature("electron_nbOfMissingHits",Feature::Int),
     Feature("electron_gsfCharge"),
     Feature("electron_ndof",Feature::Int),
     Feature("electron_chi2"),
-
     Feature("electron_numberOfBrems",Feature::Int),
+    Feature("electron_trackFbrem"),
     Feature("electron_fbrem"),
 
-    Feature("electron_e5x5"),
-    Feature("electron_e5x5Rel"),
-    Feature("electron_e2x5MaxOvere5x5"),
-    Feature("electron_e1x5Overe5x5"),
-
+    // Isolation block
     Feature("electron_neutralHadronIso"),
     Feature("electron_particleIso"),
     Feature("electron_photonIso"),
     Feature("electron_puChargedHadronIso"),
     Feature("electron_trackIso"),
-    Feature("electron_hcalDepth1OverEcal"),
-    Feature("electron_hcalDepth2OverEcal"),
     Feature("electron_ecalPFClusterIso"),
     Feature("electron_hcalPFClusterIso"),
+    
     Feature("electron_pfSumPhotonEt"),
-    Feature("electron_pfSumChargedHadronPt"),
+    Feature("electron_pfSumChargedHadronPt"), 
     Feature("electron_pfSumNeutralHadronEt"),
     Feature("electron_pfSumPUPt"),
+
     Feature("electron_dr04TkSumPt"),
     Feature("electron_dr04EcalRecHitSumEt"),
     Feature("electron_dr04HcalDepth1TowerSumEt"),
@@ -593,27 +628,34 @@ static const std::vector<Feature> jetLabels{
 
 
 static const std::vector<Feature> jetoriginFeatures{
-    Feature("jetorigin_isTauDecay_NO_TAU",Feature::Int),
-    Feature("jetorigin_isTauDecay_INVISIBLE",Feature::Int),
-    Feature("jetorigin_isTauDecay_E",Feature::Int),
-    Feature("jetorigin_isTauDecay_MU",Feature::Int),
-    Feature("jetorigin_isTauDecay_H",Feature::Int),
-    Feature("jetorigin_isTauDecay_H_1PI0",Feature::Int),
-    Feature("jetorigin_isTauDecay_H_XPI0",Feature::Int),
-    Feature("jetorigin_isTauDecay_HHH",Feature::Int),
-    Feature("jetorigin_isTauDecay_HHH_XPI0",Feature::Int),
+    Feature("jetorigin_tauDecay_NO_TAU",Feature::Int),
+    Feature("jetorigin_tauDecay_INVISIBLE",Feature::Int),
+    Feature("jetorigin_tauDecay_E",Feature::Int),
+    Feature("jetorigin_tauDecay_MU",Feature::Int),
+    Feature("jetorigin_tauDecay_H",Feature::Int),
+    Feature("jetorigin_tauDecay_H_1PI0",Feature::Int),
+    Feature("jetorigin_tauDecay_H_XPI0",Feature::Int),
+    Feature("jetorigin_tauDecay_HHH",Feature::Int),
+    Feature("jetorigin_tauDecay_HHH_XPI0",Feature::Int),
     
-    Feature("jetorigin_displacement"),
-    Feature("jetorigin_decay_angle"),
-    Feature("jetorigin_displacement_xy"),
-    //Feature("jetorigin_displacement_z "),
-    //Feature("jetorigin_ctau"),
-    Feature("jetorigin_betagamma"),
     Feature("jetorigin_partonFlavor",Feature::Int),
     Feature("jetorigin_hadronFlavor",Feature::Int),
     Feature("jetorigin_llpId",Feature::Int),
     Feature("jetorigin_llp_mass"),
-    Feature("jetorigin_llp_pt")
+    Feature("jetorigin_llp_pt"),
+
+    Feature("jetorigin_displacement"),
+    Feature("jetorigin_displacement_xy"),
+    Feature("jetorigin_displacement_z"),
+    Feature("jetorigin_decay_angle"),
+    Feature("jetorigin_betagamma"),
+        
+    Feature("jetorigin_matchedGenJetDeltaR"),
+    Feature("jetorigin_matchedGenJetPt"),
+    Feature("jetorigin_sharedVertexFraction"),
+        
+    Feature("jetorigin_genTauMass"),
+    Feature("jetorigin_recoTauMass")
 };
 
 
@@ -632,11 +674,6 @@ class UnpackedTree
         static constexpr int maxEntries_electron = 2;
 
         static constexpr int bufferSize = 64000; //default is 32kB
-       
-
-        float global_pt;
-        float global_eta;
-        float global_phi;
 
         float isData;
         float xsecweight;
@@ -708,9 +745,6 @@ class UnpackedTree
                 tree_->Branch("processId",&processId,"processId/F",bufferSize);
             }
 
-            tree_->Branch("global_pt",&global_pt,"global_pt/F",bufferSize);
-            tree_->Branch("global_eta",&global_eta,"global_eta/F",bufferSize);
-            tree_->Branch("global_phi",&global_phi,"global_phi/F",bufferSize);
 
             globalBranches = makeBranches<0>(tree_,globalFeatures);
             csvBranches = makeBranches<0>(tree_,csvFeatures);
@@ -821,11 +855,9 @@ class NanoXTree
 
         unsigned int nglobal;
         int global_jetIdx[maxEntries_global];
-        float global_pt[maxEntries_global];
-        float global_eta[maxEntries_global];
-        float global_phi[maxEntries_global];
 
         std::vector<std::shared_ptr<BranchData>> globalBranches;
+        std::unordered_map<std::string,std::shared_ptr<BranchData>> globalBranchMap;
         
         std::vector<std::shared_ptr<BranchData>> jetoriginBranches;
         std::vector<std::shared_ptr<BranchData>> jetLabelBranches;
@@ -973,11 +1005,13 @@ class NanoXTree
 
             tree_->SetBranchAddress("nglobal",&nglobal);
             tree_->SetBranchAddress("global_jetIdx",&global_jetIdx);
-            tree_->SetBranchAddress("global_pt",&global_pt);
-            tree_->SetBranchAddress("global_eta",&global_eta);
-            tree_->SetBranchAddress("global_phi",&global_phi);
 
             globalBranches = branchAddresses<maxEntries_global>(tree_,globalFeatures);
+            for (size_t ifeature = 0; ifeature < globalFeatures.size(); ++ifeature)
+            {
+                globalBranchMap[globalFeatures[ifeature].name()] = globalBranches[ifeature];
+                jetPropertiesMapForSelection[globalFeatures[ifeature].name()] = 0.;
+            }
 
             tree_->SetBranchAddress("ncsv",&ncsv);
             csvBranches = branchAddresses<maxEntries_global>(tree_,csvFeatures);
@@ -1009,6 +1043,7 @@ class NanoXTree
             {
                 symbolTable_.add_variable(featureBranchPair.first,featureBranchPair.second);
             }
+            
 
             symbolTable_.add_variable("isPrompt_ANY",isPrompt_ANY);
             symbolTable_.add_variable("isB_ANY",isB_ANY);
@@ -1018,10 +1053,6 @@ class NanoXTree
 
             symbolTable_.add_variable("rand",rand);
             symbolTable_.add_variable("ctau",ctau);
-
-            symbolTable_.add_variable("pt",pt);
-            symbolTable_.add_variable("eta",eta);
-            symbolTable_.add_variable("phi",phi);
 
 
             for (auto selectstring: selectors)
@@ -1182,14 +1213,13 @@ class NanoXTree
                     if (jetorigin_jetIdx[ijet]==jet) indexOrigin = ijet;
                 }
             }
-
             if (indexGlobal<0 or (addTruth_ and indexOrigin<0))
             {
                 return false;
             }
 
             //at least 10 GeV uncorrected
-            if (global_pt[indexGlobal]<10.)
+            if (globalBranchMap["global_pt"]->getFloat(indexGlobal)<10.)
             {
                 return false;
             }
@@ -1200,7 +1230,7 @@ class NanoXTree
             {
                 if ((GenJet_pt[Jet_genJetIdx[jet]]<5.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
                 {
-                    //std::cout << "Skipping jet with mismatched genpt: reco pt="<<Jet_pt[jet] << ", genpt="<<GenJet_pt[Jet_genJetIdx[jet]] << std::endl;
+                    std::cout << "Skipping jet with mismatched genpt: reco pt="<<Jet_pt[jet] << ", genpt="<<GenJet_pt[Jet_genJetIdx[jet]] << std::endl;
                     return false;
                 }
             }
@@ -1217,7 +1247,7 @@ class NanoXTree
             }
 
             //just a sanity check
-            if (std::fabs(Jet_eta[jet]/global_eta[indexGlobal]-1)>0.01 or std::fabs(Jet_phi[jet]/global_phi[indexGlobal]-1)>0.01)
+            if (std::fabs(Jet_eta[jet]/globalBranchMap["global_eta"]->getFloat(indexGlobal)-1)>0.01 or std::fabs(Jet_phi[jet]/globalBranchMap["global_phi"]->getFloat(indexGlobal)-1)>0.01)
             {
                 std::cout<<"Encountered mismatch between standard nanoaod jets and xtag info"<<std::endl;
                 return false;
@@ -1271,10 +1301,21 @@ class NanoXTree
                     return false;
                 }
                 
+                for (size_t ifeature = 0; ifeature < jetLabels.size(); ++ifeature)
+                {
+                    const auto name = jetLabels[ifeature].name();
+                    jetPropertiesMapForSelection[name] = jetLabelBranchMap[name]->getFloat(indexOrigin);
+                }
+                
                 for (size_t ifeature = 0; ifeature < jetoriginFeatures.size(); ++ifeature)
                 {
                     const auto name = jetoriginFeatures[ifeature].name();
                     jetPropertiesMapForSelection[name] = jetoriginBranchMap[name]->getFloat(indexOrigin);
+                }
+                for (size_t ifeature = 0; ifeature < globalFeatures.size(); ++ifeature)
+                {
+                    const auto name = globalFeatures[ifeature].name();
+                    jetPropertiesMapForSelection[name] = globalBranchMap[name]->getFloat(indexOrigin);
                 }
                 
                 isPrompt_ANY = 0;
@@ -1357,6 +1398,11 @@ class NanoXTree
                     const auto name = jetLabels[ifeature].name();
                     jetPropertiesMapForSelection[name] = 0;
                 }
+                for (size_t ifeature = 0; ifeature < globalFeatures.size(); ++ifeature)
+                {
+                    const auto name = globalFeatures[ifeature].name();
+                    jetPropertiesMapForSelection[name] = globalBranchMap[name]->getFloat(indexOrigin);
+                }
                 isPrompt_ANY = 0;
                 isB_ANY = 0;
                 isC_ANY = 0;
@@ -1367,9 +1413,6 @@ class NanoXTree
 
             rand = uniform_dist_(randomGenerator_);
             ctau = -10;
-            pt = global_pt[indexGlobal];
-            eta = global_eta[indexGlobal];
-            phi = global_phi[indexGlobal];
 
             for (auto setter: setters_)
             {
@@ -1399,7 +1442,7 @@ class NanoXTree
             }
             if (indexGlobal<0) return -1;
 
-            return global_pt[indexGlobal];
+            return globalBranchMap["global_pt"]->getFloat(indexGlobal);
         }
 
         int getJetClass(unsigned int jet)
@@ -1469,10 +1512,6 @@ class NanoXTree
                 unpackedTree.processId = processId;
             }
 
-
-            unpackedTree.global_pt = global_pt[indexGlobal];
-            unpackedTree.global_eta = global_eta[indexGlobal];
-            unpackedTree.global_phi = global_phi[indexGlobal];
 
             if (unpackedTree.globalBranches.size()!=globalBranches.size()) throw std::runtime_error("Global branches have different size! "+std::to_string(unpackedTree.globalBranches.size())+"!="+std::to_string(globalBranches.size()));
             for (size_t ifeature = 0; ifeature < globalBranches.size(); ++ifeature)
@@ -1699,7 +1738,12 @@ int main(int argc, char **argv)
   	parser.set_optional<bool>("t", "truth", true, "Add truth from jetorigin (deactivate for DA)");
     parser.set_required<std::vector<std::string>>("i", "input", "Input files");
     parser.run_and_exit_if_error();
-
+    
+    if (nClasses!=jetLabels.size()) 
+    {
+        std::cout<<"Error - number of classes ("<<std::to_string(nClasses)<<") does not correspond to number of labels ("<<std::to_string(jetLabels.size())<<")"<<std::endl;
+        return 1;
+    }
     std::string outputPrefix = parser.get<std::string>("o");
     std::cout<<"output file prefix: "<<outputPrefix<<std::endl;
 

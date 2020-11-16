@@ -302,6 +302,11 @@ for epoch in range(args.resume, args.nepochs):
                 train_batch_value['sv'],
                 train_batch_value['muon'],
                 train_batch_value['electron'],
+                
+                train_batch_value['cpf_p4'],
+                train_batch_value['npf_p4'],
+                train_batch_value['muon_p4'],
+                train_batch_value['electron_p4'],
             ]
 
 
@@ -355,7 +360,13 @@ for epoch in range(args.resume, args.nepochs):
                 test_batch_value['npf'],
                 test_batch_value['sv'],
                 test_batch_value['muon'],
-                test_batch_value['electron']
+                test_batch_value['electron'],
+                
+                test_batch_value['cpf_p4'],
+                test_batch_value['npf_p4'],
+                test_batch_value['muon_p4'],
+                test_batch_value['electron_p4'],
+                
             ]
             
             test_outputs = modelClass.test_on_batch(test_inputs_class,test_batch_value['truth'])
@@ -405,8 +416,12 @@ for epoch in range(args.resume, args.nepochs):
                         perf_batch_value[k] = np.nan_to_num(perf_batch_value[k])
                         
                     selectSignal = np.sum(perf_batch_value['truth'][:,8:],axis=1)>0.5
-                    meanParameter = np.mean(perf_batch_value['gen'][selectSignal])
-                    stdParameter = np.std(perf_batch_value['gen'][selectSignal])
+                    if np.sum(selectSignal)>0:
+                        meanParameter = min(max(np.mean(perf_batch_value['gen'][selectSignal]),-3),3)
+                        stdParameter = max(1e-2,np.std(perf_batch_value['gen'][selectSignal]))
+                    else:
+                        meanParameter = 0.0
+                        stdParameter = 0.2
                     #print meanParameter,stdParameter
                     
                     perf_batch_value['gen'] = np.random.normal(meanParameter,stdParameter,size=perf_batch_value['gen'].shape)
@@ -418,6 +433,11 @@ for epoch in range(args.resume, args.nepochs):
                         perf_batch_value['sv'],
                         perf_batch_value['muon'],
                         perf_batch_value['electron'],
+                        
+                        perf_batch_value['cpf_p4'],
+                        perf_batch_value['npf_p4'],
+                        perf_batch_value['muon_p4'],
+                        perf_batch_value['electron_p4'],
                     ]
                     perf_batch_prediction = modelClass.predict_on_batch(perf_inputs_class)
                     perfMonitor.analyze_batch(perf_batch_value,perf_batch_prediction)

@@ -24,9 +24,17 @@ class NominalNetwork():
             shape=(self.featureDict["cpf"]["max"], len(self.featureDict["cpf"]["branches"])),
             name="input_cpf"
         )
+        self.input_cpf_p4 = keras.layers.Input(
+            shape=(self.featureDict["cpf_p4"]["max"], len(self.featureDict["cpf_p4"]["branches"])),
+            name="input_cpf_p4"
+        )
         self.input_npf = keras.layers.Input(
             shape=(self.featureDict["npf"]["max"], len(self.featureDict["npf"]["branches"])),
             name="input_npf"
+        )
+        self.input_npf_p4 = keras.layers.Input(
+            shape=(self.featureDict["npf_p4"]["max"], len(self.featureDict["npf_p4"]["branches"])),
+            name="input_npf_p4"
         )
         self.input_sv = keras.layers.Input(
             shape=(self.featureDict["sv"]["max"], len(self.featureDict["sv"]["branches"])),
@@ -36,9 +44,17 @@ class NominalNetwork():
             shape=(self.featureDict["muon"]["max"], len(self.featureDict["muon"]["branches"])),
             name="input_muon"
         )
+        self.input_muon_p4 = keras.layers.Input(
+            shape=(self.featureDict["muon_p4"]["max"], len(self.featureDict["muon_p4"]["branches"])),
+            name="input_muon_p4"
+        )
         self.input_electron = keras.layers.Input(
             shape=(self.featureDict["electron"]["max"], len(self.featureDict["electron"]["branches"])),
             name="input_electron"
+        )
+        self.input_electron_p4 = keras.layers.Input(
+            shape=(self.featureDict["electron_p4"]["max"], len(self.featureDict["electron_p4"]["branches"])),
+            name="input_electron_p4"
         )
 
 
@@ -273,7 +289,7 @@ class NominalNetwork():
         return model
 
 
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen=None):
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
         globalvars_preproc = self.global_preproc(globalvars)
 
         cpf_conv = self.applyLayers(self.cpf_preproc(cpf),self.cpf_conv)
@@ -288,8 +304,8 @@ class NominalNetwork():
 
         return full_features
 
-    def predictClass(self,globalvars,cpf,npf,sv,muon,electron,gen):
-        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen)
+    def predictClass(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
+        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4)
         class_prediction = self.applyLayers(full_features,self.class_prediction)
         return class_prediction
 
@@ -301,7 +317,11 @@ class NominalNetwork():
             self.input_sv,
             self.input_muon,
             self.input_electron,
-            self.input_gen
+            self.input_gen,
+            self.input_cpf_p4,
+            self.input_npf_p4,
+            self.input_muon_p4,
+            self.input_electron_p4
         )
         model = keras.models.Model(
             inputs=[
@@ -311,7 +331,11 @@ class NominalNetwork():
                 self.input_npf,
                 self.input_sv,
                 self.input_muon,
-                self.input_electron
+                self.input_electron,
+                self.input_cpf_p4,
+                self.input_npf_p4,
+                self.input_muon_p4,
+                self.input_electron_p4
             ],
             outputs=[
                 predictedClass

@@ -3,15 +3,15 @@ import tensorflow as tf
 featureDict = {
     "truth": {
         "names":[
-            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU"
+            "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU_H","LLP_QTAU_3H"
         ],
         "weights":[
-            "jetorigin_isPrompt_E",
-            "jetorigin_isPrompt_MU",
-            "jetorigin_isPrompt_TAU",
+            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_E)",
+            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_MU)",
+            "jetorigin_isPrompt_TAU&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0||jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)",
 
-            "jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C",
-            "jetorigin_isC||jetorigin_isCC||jetorigin_isGCC",
+            "jetorigin_isB||jetorigin_isBB||jetorigin_isLeptonic_B",
+            "jetorigin_isC||jetorigin_isCC||jetorigin_isLeptonic_C",
             "jetorigin_isUD||jetorigin_isS",
             "jetorigin_isG",
             "(jetorigin_isPU)*(global_pt<50.)",
@@ -28,33 +28,39 @@ featureDict = {
             #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
             
             #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
-            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
-
-
-            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
-            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
             
-            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU"
+            
+            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_isTauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
+
+
+            "(jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_E))*(global_pt>15.)",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            "(jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_MU))*(global_pt>15.)",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0)",
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)"
             
             #"jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
             #"jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
 
         ],
         "branches":[
-            "jetorigin_isPrompt_E",
-            "jetorigin_isPrompt_MU",
-            "jetorigin_isPrompt_TAU",
-            "jetorigin_isB||jetorigin_isBB||jetorigin_isGBB||jetorigin_isLeptonic_B||jetorigin_isLeptonic_C",
-            "jetorigin_isC||jetorigin_isCC||jetorigin_isGCC",
+            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_E)",
+            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_MU)",
+            "jetorigin_isPrompt_TAU&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0||jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)",
+            "jetorigin_isB||jetorigin_isBB||jetorigin_isLeptonic_B",
+            "jetorigin_isC||jetorigin_isCC||jetorigin_isLeptonic_C",
             "jetorigin_isUD||jetorigin_isS",
             "jetorigin_isG",
             "jetorigin_isPU",
 
-            "jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD",
+          
+            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_isTauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
             
-            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE",
-            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU",
-            "jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
+            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_E)",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_MU)",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0)",
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)"
 
         ],
     },
@@ -139,6 +145,8 @@ featureDict = {
             "cpf_trackJetDistVal",
             "cpf_trackJetDistSig",
             "cpf_ptrel",
+            "cpf_deta",
+            "cpf_dphi",
             "cpf_drminsv",
             "cpf_vertex_association",
             "cpf_fromPV",
@@ -149,20 +157,18 @@ featureDict = {
             "cpf_matchedMuon",
             "cpf_matchedElectron",
             "cpf_matchedSV",
-            "cpf_numberOfValidPixelHits",
-            "cpf_pixelLayersWithMeasurement",
-            "cpf_numberOfValidStripHits",
-            "cpf_stripLayersWithMeasurement",
+            #"cpf_numberOfValidPixelHits",
+            #"cpf_pixelLayersWithMeasurement",
+            #"cpf_numberOfValidStripHits",
+            #"cpf_stripLayersWithMeasurement",
             "cpf_relmassdrop",
-            "cpf_dzMin",
+            #"cpf_dzMin",
 
-            #"cpf_deta",
-            #"cpf_dphi",
         ],
         "preprocessing":{
             "cpf_ptrel":lambda x: tf.log(1e-6+tf.nn.relu(x)),
-            #"cpf_deta":lambda x: tf.abs(x),
-            #"cpf_dphi":lambda x: tf.abs(x),
+            "cpf_deta":lambda x: tf.abs(x),
+            "cpf_dphi":lambda x: tf.abs(x),
 
             "cpf_trackEtaRel":lambda x: tf.log(1+tf.abs(x)),
             "cpf_trackPtRel":lambda x: tf.log(1e-1+tf.nn.relu(1-x)),
@@ -177,7 +183,7 @@ featureDict = {
             "cpf_trackSip3dSig":lambda x: tf.log(tf.abs(x)+1e-3),
             "cpf_track_ndof":lambda x: x*0.05,
 
-            "cpf_dzMin": lambda x: tf.log(tf.abs(x)+1e-6)
+            #"cpf_dzMin": lambda x: tf.log(tf.abs(x)+1e-6)
 
 
 
@@ -185,6 +191,17 @@ featureDict = {
         "max":25,
         "length":"length_cpf"
     },
+    
+    "cpf_p4": {
+        "branches": [
+            'cpf_px',
+            'cpf_py',
+            'cpf_pz'
+        ],
+        "max":25,
+        "length":"length_cpf"
+    },
+        
 
     "npf": {
         "branches": [
@@ -209,6 +226,18 @@ featureDict = {
         "max":25,
         "length":"length_npf"
     },
+    
+    
+    "npf_p4": {
+        "branches": [
+            'npf_px',
+            'npf_py',
+            'npf_pz'
+        ],
+        "max":25,
+        "length":"length_npf"
+    },
+      
 
     "sv" : {
         "branches":[
@@ -250,8 +279,8 @@ featureDict = {
             "muon_EtaRel",
             "muon_dphi",
             "muon_deta",
+            "muon_deltaR",
             "muon_energy",
-            "muon_jetDeltaR",
             "muon_numberOfMatchedStations",
 
             "muon_2dIP",
@@ -265,6 +294,7 @@ featureDict = {
             "muon_dxySig",
             "muon_dz",
             "muon_dzError",
+            "muon_dzSig",
             "muon_numberOfValidPixelHits",
             "muon_numberOfpixelLayersWithMeasurement",
             "muon_numberOfstripLayersWithMeasurement",
@@ -295,7 +325,7 @@ featureDict = {
             "muon_ptrel":lambda x: tf.log(1e-6+tf.nn.relu(x)),
             "muon_deta": lambda x: tf.abs(x),
             "muon_dphi": lambda x: tf.abs(x),
-            "muon_jetDeltaR":lambda x: tf.log(1e-6+tf.nn.relu(x)),
+            "muon_deltaR":lambda x: tf.log(1e-6+tf.nn.relu(x)),
 
             "muon_2dIP":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
             "muon_2dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
@@ -306,6 +336,7 @@ featureDict = {
             "muon_dxySig":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
             "muon_dz":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
             "muon_dzError":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
+            "muon_dzSig":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
 
             "muon_chi2":lambda x: tf.log(tf.minimum(1e3,tf.nn.relu(x))+1e-6),
             "muon_ndof": lambda x: 0.1*x,
@@ -330,11 +361,22 @@ featureDict = {
         "max":2,
         "length":"length_mu"
     },
+    
+    "muon_p4": {
+        "branches": [
+            'muon_px',
+            'muon_py',
+            'muon_pz'
+        ],
+        "max":2,
+        "length":"length_mu"
+    },
+      
 
     "electron" : {
         "branches":[
             "electron_ptrel",
-            "electron_jetDeltaR",
+            "electron_deltaR",
             "electron_deta",
             "electron_dphi",
             "electron_energy",
@@ -382,7 +424,11 @@ featureDict = {
 
             "electron_EtaRel",
             "electron_dxy",
+            "electron_dxyError",
+            "electron_dxySig",
             "electron_dz",
+            "electron_dzError",
+            "electron_dzSig",
             "electron_nbOfMissingHits",
             "electron_ndof",
             "electron_chi2",
@@ -422,7 +468,7 @@ featureDict = {
             "electron_ptrel":lambda x: tf.log(1e-6+tf.nn.relu(x)),
             "electron_deta": lambda x: tf.abs(x),
             "electron_dphi": lambda x: tf.abs(x),
-            "electron_jetDeltaR":lambda x: tf.log(1e-6+tf.nn.relu(x)),
+            "electron_deltaR":lambda x: tf.log(1e-6+tf.nn.relu(x)),
 
             "electron_chi2":lambda x: tf.log(tf.minimum(1e3,tf.nn.relu(x))+1e-6),
             "electron_ndof": lambda x: x*0.1,
@@ -439,7 +485,11 @@ featureDict = {
             "electron_3dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
 
             "electron_dxy":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
+            "electron_dxyError":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
+            "electron_dxySig":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
             "electron_dz":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
+            "electron_dzError":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
+            "electron_dzSig":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
 
             "electron_neutralHadronIso":lambda x: tf.log(tf.nn.relu(x)+1e-6),
             "electron_photonIso":lambda x: tf.log(tf.nn.relu(x)+1e-6),
@@ -451,6 +501,16 @@ featureDict = {
             "electron_hcalDepth1OverEcal":lambda x: tf.log(tf.nn.relu(x)+1e-6),
             "electron_hcalDepth2OverEcal":lambda x: tf.log(tf.nn.relu(x)+1e-6),
         },
+        "max":2,
+        "length":"length_ele"
+    },
+    
+    "electron_p4": {
+        "branches": [
+            'electron_px',
+            'electron_py',
+            'electron_pz'
+        ],
         "max":2,
         "length":"length_ele"
     },

@@ -6,8 +6,8 @@ import shutil
 inputPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/inputs_201107/2016"
 
 
-outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_201107_mixed/2016"
-outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_201107_mixed/2016"
+outputTrainPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/training_201107_signal/2016"
+outputTestPath = "/vols/build/cms/mkomm/HNL/XTagger/Unpacker/testing_201107_signal/2016"
 
 configs = [
     {
@@ -49,13 +49,91 @@ configs = [
         ],
         "output":"WJets.txt"
     },
+]
+
+configs.extend([
     {
         "pattern":"HNL_\S+_all_ctau1p0e04\S+",
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e04.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e03\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e03.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e02\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e02.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e01\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e01.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e00\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e00.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e-01\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e-01.txt"
+    },
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e-02\S+",
+        "maxFiles": 10,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
+        ],
+        "output":"HNL_all_ctau1p0e-02.txt"
+    },
+
+])
+
+'''
+configs.extend([
+    {
+        "pattern":"HNL_\S+_all_ctau1p0e04\S+",
+        "maxFiles": 4,
+        "trainFraction": 1,
+        "header":[
+            "#select (jetorigin_displacement_xy>-3.)",
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e04.txt"
     },
@@ -65,7 +143,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e03.txt"
     },
@@ -75,7 +153,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e02.txt"
     },
@@ -85,7 +163,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e01.txt"
     },
@@ -95,7 +173,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e00.txt"
     },
@@ -105,7 +183,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-01.txt"
     },
@@ -115,7 +193,7 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-02.txt"
     },
@@ -125,12 +203,12 @@ configs = [
         "trainFraction": 1,
         "header":[
             "#select (jetorigin_displacement_xy>-3.)",
-            "#select ((isLLP_ANY)>0.5)"
+            "#select ((isLLP_ANY)>0.5)*((jetorigin_isTauDecay_INVISIBLE<0.5) + (jetorigin_isTauDecay_NO_TAU>0.5))"
         ],
         "output":"HNLGun.txt"
     },
-]
-
+])
+'''
 
 try:
     shutil.rmtree(os.path.join(outputTrainPath))

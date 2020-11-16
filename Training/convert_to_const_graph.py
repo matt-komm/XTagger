@@ -33,14 +33,22 @@ sess = K.get_session()
 
 tf_cpf = tf.placeholder('float32',shape=(None,featureDict["cpf"]["max"],len(featureDict["cpf"]["branches"])),name="cpf")
 cpf = keras.layers.Input(tensor=tf_cpf)
+tf_cpf_p4 = tf.placeholder('float32',shape=(None,featureDict["cpf_p4"]["max"],len(featureDict["cpf_p4"]["branches"])),name="cpf_p4")
+cpf_p4 = keras.layers.Input(tensor=tf_cpf_p4)
 tf_npf = tf.placeholder('float32',shape=(None,featureDict["npf"]["max"],len(featureDict["npf"]["branches"])),name="npf")
 npf = keras.layers.Input(tensor=tf_npf)
+tf_npf_p4 = tf.placeholder('float32',shape=(None,featureDict["npf_p4"]["max"],len(featureDict["npf_p4"]["branches"])),name="npf_p4")
+npf_p4 = keras.layers.Input(tensor=tf_npf_p4)
 tf_sv = tf.placeholder('float32',shape=(None,featureDict["sv"]["max"],len(featureDict["sv"]["branches"])),name="sv")
 sv = keras.layers.Input(tensor=tf_sv)
 tf_muon = tf.placeholder('float32',shape=(None,featureDict["muon"]["max"],len(featureDict["muon"]["branches"])),name="muon")
 muon = keras.layers.Input(tensor=tf_muon)
+tf_muon_p4 = tf.placeholder('float32',shape=(None,featureDict["muon_p4"]["max"],len(featureDict["muon_p4"]["branches"])),name="muon_p4")
+muon_p4 = keras.layers.Input(tensor=tf_muon_p4)
 tf_electron = tf.placeholder('float32',shape=(None,featureDict["electron"]["max"],len(featureDict["electron"]["branches"])),name="electron")
 electron = keras.layers.Input(tensor=tf_electron)
+tf_electron_p4 = tf.placeholder('float32',shape=(None,featureDict["electron_p4"]["max"],len(featureDict["electron_p4"]["branches"])),name="electron_p4")
+electron_p4 = keras.layers.Input(tensor=tf_electron_p4)
 tf_globalvars = tf.placeholder('float32',shape=(None,len(featureDict["globalvars"]["branches"])),name="globalvars")
 globalvars = keras.layers.Input(tensor=tf_globalvars)
 
@@ -49,21 +57,25 @@ gen = keras.layers.Input(tensor=tf_gen)
 
 
 print "cpf shape: ",cpf.shape.as_list()
+print "cpf p4 shape: ",cpf_p4.shape.as_list()
 print "npf shape: ",npf.shape.as_list()
+print "npf p4 shape: ",npf_p4.shape.as_list()
 print "sv shape: ",sv.shape.as_list()
 print "muon shape: ",muon.shape.as_list()
+print "muon p4 shape: ",muon_p4.shape.as_list()
 print "electron shape: ",electron.shape.as_list()
+print "electron p4 shape: ",electron_p4.shape.as_list()
 print "globalvars shape: ",globalvars.shape.as_list()
 print "gen shape: ",gen.shape.as_list()
 
 network = Network(featureDict)
 print "learning phase: ",sess.run(keras.backend.learning_phase())
 
-class_prediction = network.predictClass(globalvars,cpf,npf,sv,muon,electron,gen)
+class_prediction = network.predictClass(globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4)
     
 prediction = tf.identity(class_prediction,name="prediction")
 
-model = keras.Model(inputs=[gen, globalvars, cpf, npf, sv, muon, electron], outputs=class_prediction)
+model = keras.Model(inputs=[gen, globalvars, cpf, npf, sv, muon, electron,cpf_p4,npf_p4,muon_p4,electron_p4], outputs=class_prediction)
 
 train_writer = tf.summary.FileWriter("graph",sess.graph)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -87,6 +99,10 @@ feed_dict={
     tf_sv:numpy.zeros(shape(tf_sv)),
     tf_muon:numpy.zeros(shape(tf_muon)),
     tf_electron:numpy.zeros(shape(tf_electron)),
+    tf_cpf_p4:numpy.zeros(shape(tf_cpf_p4)),
+    tf_npf_p4:numpy.zeros(shape(tf_npf_p4)),
+    tf_muon_p4:numpy.zeros(shape(tf_muon_p4)),
+    tf_electron_p4:numpy.zeros(shape(tf_electron_p4)),
 }
 
 prediction_val = sess.run(

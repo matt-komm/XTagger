@@ -1,3 +1,1 @@
-#set ctau := -1
-#select ((isG>0.5)*((0.05+exp(-1.2*logpt))>rand)) + (isG<0.5)
-../test-files/nanoaod/RunIISummer16NanoAODv2_MC.root
+/vols/build/cms/mkomm/HNL/CMSSW_10_2_18/src/nano.root
