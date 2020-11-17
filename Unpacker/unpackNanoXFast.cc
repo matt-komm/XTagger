@@ -543,7 +543,6 @@ static const std::vector<Feature> electronFeatures{
     Feature("electron_ndof",Feature::Int),
     Feature("electron_chi2"),
     Feature("electron_numberOfBrems",Feature::Int),
-    Feature("electron_trackFbrem"),
     Feature("electron_fbrem"),
 
     // Isolation block
@@ -1223,14 +1222,22 @@ class NanoXTree
             {
                 return false;
             }
+            
+            //just a sanity check
+            if (std::fabs(Jet_eta[jet]/globalBranchMap["global_eta"]->getFloat(indexGlobal)-1)>0.01 or std::fabs(Jet_phi[jet]/globalBranchMap["global_phi"]->getFloat(indexGlobal)-1)>0.01)
+            {
+                std::cout<<"Encountered mismatch between standard nanoaod jets and xtag info"<<std::endl;
+                return false;
+            }
+
 
             //ignore jet if reco/gen pt largely disagree -> likely random PU match
             //require minimum of genjet pt of 10 GeV
             if (addTruth_ and jetLabelBranchMap["jetorigin_isPU"]->getFloat(indexOrigin)<0.5 and Jet_genJetIdx[jet]>-1 and Jet_genJetIdx[jet]<maxJets)
             {
-                if ((GenJet_pt[Jet_genJetIdx[jet]]<5.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
+                if ((GenJet_pt[Jet_genJetIdx[jet]]<10.) or ((Jet_pt[jet]/GenJet_pt[Jet_genJetIdx[jet]]) < 0.5))
                 {
-                    std::cout << "Skipping jet with mismatched genpt: reco pt="<<Jet_pt[jet] << ", genpt="<<GenJet_pt[Jet_genJetIdx[jet]] << std::endl;
+                    //std::cout << "Skipping jet with mismatched genpt: reco pt="<<Jet_pt[jet] << ", genpt="<<GenJet_pt[Jet_genJetIdx[jet]] << std::endl;
                     return false;
                 }
             }
@@ -1246,13 +1253,7 @@ class NanoXTree
                 return false;
             }
 
-            //just a sanity check
-            if (std::fabs(Jet_eta[jet]/globalBranchMap["global_eta"]->getFloat(indexGlobal)-1)>0.01 or std::fabs(Jet_phi[jet]/globalBranchMap["global_phi"]->getFloat(indexGlobal)-1)>0.01)
-            {
-                std::cout<<"Encountered mismatch between standard nanoaod jets and xtag info"<<std::endl;
-                return false;
-            }
-
+            
 
             if (Jet_nConstituents[jet]<2) return false;
 
@@ -2077,7 +2078,7 @@ int main(int argc, char **argv)
     }
 
     std::cout<<"----- Sample ----- "<<std::endl;
-    std::cout<<"    ";
+    std::cout<<"                    ";
     for (int ibin = 0; ibin < ptSample.GetNbinsX(); ++ibin)
     {
         printf("%7.1f ",ptSample.GetXaxis()->GetBinCenter(ibin+1));
@@ -2085,7 +2086,8 @@ int main(int argc, char **argv)
     std::cout<<std::endl;
     for (int c = 0; c < ptSample.GetNbinsY(); ++c)
     {
-        printf("%2i: ",c+1);
+        printf("%18s: ",jetLabels[c].name().substr(10).c_str());
+        //printf("%2i: ",c+1);
         for (int ibin = 0; ibin < ptSample.GetNbinsX(); ++ibin)
         {
             printf("%5.0f   ",ptSample.GetBinContent(ibin+1,c+1));
@@ -2095,7 +2097,8 @@ int main(int argc, char **argv)
     std::cout<<"----- Train ----- "<<std::endl;
     for (size_t c = 0; c < eventsPerClassPerFileTrain.size(); ++c)
     {
-        std::cout<<"jet class "<<c<<": ";
+        printf("jet class: %18s: ",jetLabels[c].name().substr(10).c_str());
+        //std::cout<<"jet class "<<c<<": ";
         for (size_t i = 0; i < nOutputs; ++i)
         {
             std::cout<<eventsPerClassPerFileTrain[c][i]<<", ";
@@ -2105,7 +2108,8 @@ int main(int argc, char **argv)
     std::cout<<"----- Test ----- "<<std::endl;
     for (size_t c = 0; c < eventsPerClassPerFileTest.size(); ++c)
     {
-        std::cout<<"jet class "<<c<<": ";
+        printf("jet class: %18s: ",jetLabels[c].name().substr(10).c_str());
+        //std::cout<<"jet class "<<c<<": ";
         for (size_t i = 0; i < nOutputs; ++i)
         {
             std::cout<<eventsPerClassPerFileTest[c][i]<<", ";
