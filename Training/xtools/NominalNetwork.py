@@ -265,29 +265,6 @@ class NominalNetwork():
             output = layer(output)
         return output
 
-    def makePreprocessingModel(self):
-
-        model = keras.models.Model(
-            inputs=[
-                self.input_gen,
-                self.input_globalvars,
-                self.input_cpf,
-                self.input_npf,
-                self.input_sv,
-                self.input_muon,
-                self.input_electron
-            ],
-            outputs=[
-                gen,
-                self.global_preproc(self.input_globalvars),
-                self.cpf_preproc(self.input_cpf),
-                self.npf_preproc(self.input_npf),
-                self.sv_preproc(self.input_sv),
-                self.muon_preproc(self.input_muon),
-                self.electron_preproc(self.input_electron)
-            ])
-        return model
-
 
     def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
         globalvars_preproc = self.global_preproc(globalvars)

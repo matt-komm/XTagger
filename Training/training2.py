@@ -55,13 +55,15 @@ parser.add_argument('--noda', action='store_true',
 parser.add_argument('--seed', dest='seed', default=int(time.time()), type=int,
                     help='Random seed')
 parser.add_argument('-m', '--model', action='store', help='model file',
-                    default='xtools/AttentionNetwork.py')
+                    default='xtools/NominalNetwork.py')
 parser.add_argument('-r', '--resume', type=int, help='resume training at given epoch',
                     default=0, dest='resume')
 parser.add_argument('--lambda', type=float,help='domain loss weight',
                     default=0.3,dest='lambda')
 parser.add_argument('--lr', type=float,help='initial learning rate',
-                    default=0.01,dest='lr')
+                    default=0.01,dest='lr')  
+parser.add_argument('--lrScan', help='scan for best learning rate',
+                    default=False,dest='lrScan', action='store_true')
 parser.add_argument('--kappa', type=float,help='learning rate decay val',
                     default=0.01,dest='kappa')
 
@@ -97,8 +99,10 @@ logging.info("Output folder: %s"%args.outputFolder)
 logging.info("Epochs: %i"%args.nepochs)
 logging.info("Batch size: %i"%args.batchSize)
 logging.info("Random seed: %i"%args.seed)
-
-logging.info("Learning rate: %.3e"%args.lr)
+if args.lrScan:
+    logging.info("Will scan for optimal initial learning rate")
+else:
+    logging.info("Learning rate: %.3e"%args.lr)
 logging.info("Learning rate decay: %.3e"%args.kappa)
 
 random.seed(args.seed)
@@ -131,8 +135,7 @@ resampleWeights = xtools.ResampleWeights(
     trainInputs.getFileList(),
     featureDict['truth']['names'],
     featureDict['truth']['weights'],
-    targetWeight='jetorigin_isLLP_QQ||jetorigin_isLLP_Q||jetorigin_isLLP_RAD' \
-            +'||jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU' \
+    targetWeight='jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU' \
             +'||jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE' \
             +'||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU',
     ptBinning=np.concatenate([[10.],np.logspace(1.2,2.1,22)]),#np.array([10., 12.5, 15., 17.5, 20., 22.5, 25.,27.5 30.,3 35., 40., 50., 60., 70., 80., 100., 120.]),
@@ -141,7 +144,7 @@ resampleWeights = xtools.ResampleWeights(
 )
 
 resampleWeights.plot(outputFolder)
-weights = resampleWeights.reweight(classBalance=True,oversampling=5)
+weights = resampleWeights.reweight(classBalance=True,oversampling=2)
 weights.plot(os.path.join(outputFolder,"weights.pdf"))
 weights.save(os.path.join(outputFolder,"weights.root"))
 
@@ -186,8 +189,15 @@ def resetSession():
 signal.signal(signal.SIGINT, lambda signum, frame: [resetSession(),sys.exit(1)])
 
 
+if args.lrScan and args.resume==0:
+    epochStart = -1
+    lossPerLR = {}
+elif args.resume>0:
+    epochStart = args.resume
+else:
+    epochStart = 0
 
-for epoch in range(args.resume, args.nepochs):
+for epoch in range(epochStart, args.nepochs):
     start_time_epoch = time.time()
 
     Network = imp.load_source('Network', os.path.join(args.outputFolder,"Network.py")).network
@@ -197,8 +207,11 @@ for epoch in range(args.resume, args.nepochs):
     modelClass = network.makeClassModel()
 
 
-    learningRateDecay = 1./(1.+args.kappa*max(0,epoch-5)**1.5)
-    learningRate = args.lr*learningRateDecay
+    if args.lrScan and epoch==-1:
+        learningRate = 1e-6
+    else:
+        learningRateDecay = 1./(1.+args.kappa*max(0,epoch-5)**1.5)
+        learningRate = args.lr*learningRateDecay
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
 
     #TODO: keras might be wrong here: ytrue <-> ypredicted needs to be swapped
@@ -312,12 +325,46 @@ for epoch in range(args.resume, args.nepochs):
 
             train_outputs = modelClass.train_on_batch(train_inputs_class,train_batch_value['truth'])
             train_loss+=train_outputs[0]
-            if step%10==0:
-                logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
-
+            
+            if args.lrScan and epoch==-1:
+                k = math.log10(learningRate)
+                if not lossPerLR.has_key(k):
+                    lossPerLR[k] = 0.
+                lossPerLR[k] += train_outputs[0]
+                if step%4==0:
+                    logging.info("LR scan step %i: lr=%.4e, loss=%.4f, accuracy=%.2f%%"%(step,learningRate,train_outputs[0],100.*train_outputs[1]))
+                    learningRate = 10**(-5+5*step/100.) #scan from 1e-5 to 1e0 in 4 steps
+                    K.set_value(modelClass.optimizer.lr, learningRate)
+            else:
+                if step%10==0:
+                    logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
+                    
+            if args.lrScan and epoch==-1 and step>=100:
+                break
+                
 
     except tf.errors.OutOfRangeError:
         pass
+
+    if args.lrScan:
+        if epoch==-1 and step<100:
+            raise Exception("Not enough steps to scan LR range") 
+        else:
+            lrValues = np.array([sorted(lossPerLR.keys())])
+            lossValues = np.array([lossPerLR[k] for k in sorted(lossPerLR.keys())])
+            print lrValues
+            print lossValues
+            #for _ in range(10):
+            #    lossValues = np.convolve(lossValues,[0.1,0.8,0.1],'same')
+            #print lossValues
+            for i in range(len(lossValues)-1):
+                lossValues[i] = lossValues[i]/lossValues[i+1]
+            #lossValues = np.convolve(lossValues,[1.,-2,1.])
+            print lossValues
+            
+            logging.info('Done scanning for optimal LR')
+            resetSession()
+            continue
 
     train_loss = train_loss/step
     time_train = (time.time()-time_train)/step

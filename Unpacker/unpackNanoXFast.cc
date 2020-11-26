@@ -1257,7 +1257,7 @@ class NanoXTree
 
             if (Jet_nConstituents[jet]<2) return false;
 
-
+            
             if (jetLabelBranchMap["jetorigin_isPrompt_E"]->getFloat(indexOrigin)<0.5 
                 and jetLabelBranchMap["jetorigin_isPrompt_MU"]->getFloat(indexOrigin)<0.5 
                 and jetLabelBranchMap["jetorigin_isPrompt_TAU"]->getFloat(indexOrigin)<0.5)

@@ -6,9 +6,9 @@ featureDict = {
             "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU_H","LLP_QTAU_3H"
         ],
         "weights":[
-            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_E)",
-            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_MU)",
-            "jetorigin_isPrompt_TAU&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0||jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)",
+            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_tauDecay_E)",
+            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_tauDecay_MU)",
+            "jetorigin_isPrompt_TAU&&(jetorigin_tauDecay_H||jetorigin_tauDecay_H_1PI0||jetorigin_tauDecay_H_XPI0||jetorigin_tauDecay_HHH||jetorigin_tauDecay_HHH_XPI0)",
 
             "jetorigin_isB||jetorigin_isBB||jetorigin_isLeptonic_B",
             "jetorigin_isC||jetorigin_isCC||jetorigin_isLeptonic_C",
@@ -30,23 +30,23 @@ featureDict = {
             #"jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD||jetorigin_isLLP_B||jetorigin_isLLP_BB||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU",
             
             
-            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_isTauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
+            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_tauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
 
 
-            "(jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_E))*(global_pt>15.)",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
-            "(jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_MU))*(global_pt>15.)",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            "(jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_tauDecay_E))",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            "(jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_tauDecay_MU))",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
             
-            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0)",
-            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)"
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_tauDecay_H||jetorigin_tauDecay_H_1PI0||jetorigin_tauDecay_H_XPI0)",
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_tauDecay_HHH||jetorigin_tauDecay_HHH_XPI0)"
             
             #"jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
             #"jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
 
         ],
         "branches":[
-            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_E)",
-            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_isTauDecay_MU)",
-            "jetorigin_isPrompt_TAU&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0||jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)",
+            "jetorigin_isPrompt_E||(jetorigin_isPrompt_TAU&&jetorigin_tauDecay_E)",
+            "jetorigin_isPrompt_MU||(jetorigin_isPrompt_TAU&&jetorigin_tauDecay_MU)",
+            "jetorigin_isPrompt_TAU&&(jetorigin_tauDecay_H||jetorigin_tauDecay_H_1PI0||jetorigin_tauDecay_H_XPI0||jetorigin_tauDecay_HHH||jetorigin_tauDecay_HHH_XPI0)",
             "jetorigin_isB||jetorigin_isBB||jetorigin_isLeptonic_B",
             "jetorigin_isC||jetorigin_isCC||jetorigin_isLeptonic_C",
             "jetorigin_isUD||jetorigin_isS",
@@ -54,13 +54,13 @@ featureDict = {
             "jetorigin_isPU",
 
           
-            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_isTauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
+            "(jetorigin_isLLP_Q||jetorigin_isLLP_QQ||jetorigin_isLLP_RAD)&&jetorigin_tauDecay_NO_TAU",#||jetorigin_isLLP_B||jetorigin_isLLP_BB",
             
-            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_E)",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
-            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_isTauDecay_MU)",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
+            "jetorigin_isLLP_E||jetorigin_isLLP_QE||jetorigin_isLLP_QQE||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_tauDecay_E)",#||jetorigin_isLLP_BE||jetorigin_isLLP_BBE",
+            "jetorigin_isLLP_MU||jetorigin_isLLP_QMU||jetorigin_isLLP_QQMU||((jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&jetorigin_tauDecay_MU)",#||jetorigin_isLLP_BMU||jetorigin_isLLP_BBMU",
             
-            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_H||jetorigin_isTauDecay_H_1PI0||jetorigin_isTauDecay_H_XPI0)",
-            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_isTauDecay_HHH||jetorigin_isTauDecay_HHH_XPI0)"
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_tauDecay_H||jetorigin_tauDecay_H_1PI0||jetorigin_tauDecay_H_XPI0)",
+            "(jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU)&&(jetorigin_tauDecay_HHH||jetorigin_tauDecay_HHH_XPI0)"
 
         ],
     },
@@ -75,15 +75,29 @@ featureDict = {
         "branches": [
             "global_pt",
             "global_eta",
+            "global_phi",
             "global_mass",
+            "global_energy",
+
             "global_area",
+
+            "global_beta",
+            "global_dR2Mean",
+            "global_frac01",
+            "global_frac02",
+            "global_frac03",
+            "global_frac04",
+
+            "global_jetR",
+            "global_jetRchg",
+
             "global_n60",
             "global_n90",
+
             "global_chargedEmEnergyFraction",
             "global_chargedHadronEnergyFraction",
             "global_chargedMuEnergyFraction",
             "global_electronEnergyFraction",
-            
 
             "global_tau1",
             "global_tau2",
@@ -101,14 +115,12 @@ featureDict = {
             "global_eventShapeC",
             "global_eventShapeD",
 
-            "global_beta",
-            "global_dR2Mean",
-            "global_frac01",
-            "global_frac02",
-            "global_frac03",
-            "global_frac04",
-            "global_jetR",
-            "global_jetRchg",
+            "global_numberCpf",
+            "global_numberNpf",
+            "global_numberSv",
+            #"global_numberSvAdapted",
+            "global_numberMuon",
+            "global_numberElectron",
 
             "csv_trackSumJetEtRatio",
             "csv_trackSumJetDeltaR",
@@ -117,8 +129,8 @@ featureDict = {
             "csv_trackSip2dSigAboveCharm",
             "csv_trackSip3dValAboveCharm",
             "csv_trackSip3dSigAboveCharm",
+            "csv_jetNTracksEtaRel",
             "csv_jetNSelectedTracks",
-            "csv_jetNTracksEtaRel"
         ],
         "preprocessing":{
             "global_pt":lambda x: tf.log(tf.clip_by_value(x,1e-3,100.)),
@@ -132,6 +144,11 @@ featureDict = {
 
     "cpf": {
         "branches": [
+            "cpf_ptrel",
+            "cpf_deta",
+            "cpf_dphi",
+            "cpf_deltaR",
+
             "cpf_trackEtaRel",
             "cpf_trackPtRel",
             "cpf_trackPPar",
@@ -144,25 +161,35 @@ featureDict = {
             "cpf_trackSip3dSig",
             "cpf_trackJetDistVal",
             "cpf_trackJetDistSig",
-            "cpf_ptrel",
-            "cpf_deta",
-            "cpf_dphi",
             "cpf_drminsv",
             "cpf_vertex_association",
             "cpf_fromPV",
             "cpf_puppi_weight",
             "cpf_track_chi2",
             "cpf_track_quality",
-            "cpf_track_ndof",
+            "cpf_track_numberOfValidPixelHits",
+            "cpf_track_pixelLayersWithMeasurement",
+            "cpf_track_numberOfValidStripHits",
+            "cpf_track_stripLayersWithMeasurement",
+            "cpf_relmassdrop",
+
+            "cpf_trackSip2dValSV",
+            "cpf_trackSip2dSigSV",
+            "cpf_trackSip3dValSV",
+            "cpf_trackSip3dSigSV",
+
+            "cpf_trackSip2dValSV_adapted",
+            "cpf_trackSip2dSigSV_adapted",
+            "cpf_trackSip3dValSV_adapted",
+            "cpf_trackSip3dSigSV_adapted",
+
             "cpf_matchedMuon",
             "cpf_matchedElectron",
             "cpf_matchedSV",
-            #"cpf_numberOfValidPixelHits",
-            #"cpf_pixelLayersWithMeasurement",
-            #"cpf_numberOfValidStripHits",
-            #"cpf_stripLayersWithMeasurement",
-            "cpf_relmassdrop",
-            #"cpf_dzMin",
+            #"cpf_matchedSV_adapted",
+            "cpf_track_ndof",
+
+            "cpf_dZmin"
 
         ],
         "preprocessing":{
@@ -274,21 +301,24 @@ featureDict = {
 
     "muon" : {
         "branches":[
-
             "muon_ptrel",
-            "muon_EtaRel",
-            "muon_dphi",
             "muon_deta",
-            "muon_deltaR",
+            "muon_dphi",
+            "muon_px",
+            "muon_py",
+            "muon_pz",
+            "muon_charge",
             "muon_energy",
+            "muon_et",
+            "muon_deltaR",
             "muon_numberOfMatchedStations",
 
-            "muon_2dIP",
-            "muon_2dIPSig",
-            "muon_3dIP",
-            "muon_3dIPSig",
-            "muon_isLoose",
+            "muon_IP2d",
+            "muon_IP2dSig",
+            "muon_IP3d",
+            "muon_IP3dSig",
 
+            "muon_EtaRel",
             "muon_dxy",
             "muon_dxyError",
             "muon_dxySig",
@@ -316,10 +346,10 @@ featureDict = {
             "muon_Pfpileup03",
             "muon_sumPfPhotonEt03",
 
+
             "muon_timeAtIpInOut",
             "muon_timeAtIpInOutErr",
             "muon_timeAtIpOutIn"
-
         ],
         "preprocessing":{
             "muon_ptrel":lambda x: tf.log(1e-6+tf.nn.relu(x)),
@@ -327,10 +357,10 @@ featureDict = {
             "muon_dphi": lambda x: tf.abs(x),
             "muon_deltaR":lambda x: tf.log(1e-6+tf.nn.relu(x)),
 
-            "muon_2dIP":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            "muon_2dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
-            "muon_3dIP":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            "muon_3dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
+            "muon_IP2d":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            "muon_IP2dSig":lambda x: tf.log(tf.abs(x)+1e-3),
+            "muon_IP3d":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            "muon_IP3dSig":lambda x: tf.log(tf.abs(x)+1e-3),
 
             "muon_dxy":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
             "muon_dxySig":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
@@ -379,6 +409,10 @@ featureDict = {
             "electron_deltaR",
             "electron_deta",
             "electron_dphi",
+            "electron_px",
+            "electron_py",
+            "electron_pz",
+            "electron_charge",
             "electron_energy",
             "electron_EtFromCaloEn",
             "electron_isEB",
@@ -387,39 +421,46 @@ featureDict = {
             "electron_isPassConversionVeto",
             "electron_convDist",
             "electron_convFlags",
-
             "electron_convRadius",
             "electron_hadronicOverEm",
             "electron_ecalDrivenSeed",
+            "electron_IP2d",
+            "electron_IP2dSig",
+            "electron_IP3d",
+            "electron_IP3dSig",
 
-
-            "electron_SC_energy",
-            "electron_SC_deta",
-            "electron_SC_dphi",
-            "electron_SC_et",
-            "electron_SC_eSuperClusterOverP",
+            "electron_elecSC_energy",
+            "electron_elecSC_deta",
+            "electron_elecSC_dphi",
+            "electron_elecSC_et",
+            "electron_elecSC_eSuperClusterOverP",
             "electron_scPixCharge",
-            "electron_sigmaEtaEta",
-            "electron_sigmaIetaIeta",
-            "electron_sigmaIphiIphi",
-            #"electron_r9",
             "electron_superClusterFbrem",
 
-            "electron_2dIP",
-            "electron_2dIPSig",
-            "electron_3dIP",
-            "electron_3dIPSig",
             "electron_eSeedClusterOverP",
             "electron_eSeedClusterOverPout",
             "electron_eSuperClusterOverP",
 
+            "electron_sigmaEtaEta",
+            "electron_sigmaIetaIeta",
+            "electron_sigmaIphiIphi",
+            "electron_e5x5",
+            "electron_e5x5Rel",
+            "electron_e1x5Overe5x5",
+            "electron_e2x5MaxOvere5x5",
+            "electron_r9",
+            "electron_hcalOverEcal",
+            "electron_hcalDepth1OverEcal",
+            "electron_hcalDepth2OverEcal",
+
             "electron_deltaEtaEleClusterTrackAtCalo",
             "electron_deltaEtaSeedClusterTrackAtCalo",
-            "electron_deltaPhiSeedClusterTrackAtCalo",
+            "electron_deltaPhiSeedClusterTrackAtCalo", 
             "electron_deltaEtaSeedClusterTrackAtVtx",
             "electron_deltaEtaSuperClusterTrackAtVtx",
             "electron_deltaPhiEleClusterTrackAtCalo",
             "electron_deltaPhiSuperClusterTrackAtVtx",
+
             "electron_sCseedEta",
 
             "electron_EtaRel",
@@ -430,30 +471,25 @@ featureDict = {
             "electron_dzError",
             "electron_dzSig",
             "electron_nbOfMissingHits",
+            "electron_gsfCharge",
             "electron_ndof",
             "electron_chi2",
-
             "electron_numberOfBrems",
             "electron_fbrem",
-
-            "electron_e5x5",
-            "electron_e5x5Rel",
-            "electron_e2x5MaxOvere5x5",
-            "electron_e1x5Overe5x5",
 
             "electron_neutralHadronIso",
             "electron_particleIso",
             "electron_photonIso",
             "electron_puChargedHadronIso",
             "electron_trackIso",
-            "electron_hcalDepth1OverEcal",
-            "electron_hcalDepth2OverEcal",
             "electron_ecalPFClusterIso",
             "electron_hcalPFClusterIso",
+
             "electron_pfSumPhotonEt",
-            "electron_pfSumChargedHadronPt",
+            "electron_pfSumChargedHadronPt", 
             "electron_pfSumNeutralHadronEt",
             "electron_pfSumPUPt",
+
             "electron_dr04TkSumPt",
             "electron_dr04EcalRecHitSumEt",
             "electron_dr04HcalDepth1TowerSumEt",
@@ -462,7 +498,6 @@ featureDict = {
             "electron_dr04HcalDepth2TowerSumEtBc",
             "electron_dr04HcalTowerSumEt",
             "electron_dr04HcalTowerSumEtBc"
-
         ],
         "preprocessing":{
             "electron_ptrel":lambda x: tf.log(1e-6+tf.nn.relu(x)),
@@ -477,12 +512,13 @@ featureDict = {
             "electron_eSeedClusterOverP":lambda x: tf.log(1e-5+tf.nn.relu(1-x)),
             "electron_eSeedClusterOverPout":lambda x: tf.log(1e-5+tf.nn.relu(1-x)),
 
-            "electron_SC_eSuperClusterOverP":lambda x: tf.log(1e-5+tf.nn.relu(x)),
+            "electron_elecSC_eSuperClusterOverP":lambda x: tf.log(1e-5+tf.nn.relu(x)),
+            "electron_eSuperClusterOverP":lambda x: tf.log(1e-5+tf.nn.relu(x)),
 
-            "electron_2dIP":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            "electron_2dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
-            "electron_3dIP":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
-            "electron_3dIPSig":lambda x: tf.log(tf.abs(x)+1e-3),
+            "electron_IP2d":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            "electron_IP2dSig":lambda x: tf.log(tf.abs(x)+1e-3),
+            "electron_IP3d":lambda x: tf.sign(x)*(tf.log(tf.abs(x)+1e-3)+5),
+            "electron_IP3dSig":lambda x: tf.log(tf.abs(x)+1e-3),
 
             "electron_dxy":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
             "electron_dxyError":lambda x: tf.sign(x)*tf.log(1e-6+tf.abs(x)),
