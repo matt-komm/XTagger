@@ -3,11 +3,11 @@ import sys
 import re
 import shutil
 
-inputPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/inputs_201117/2016"
+inputPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/inputs_201117/2018"
 
 
 #outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_signal/2016"
-outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_mixed/2016"
+outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_mixed/2018"
 
 configs = [
     {
@@ -176,7 +176,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e04.txt"
@@ -186,7 +186,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e03.txt"
@@ -196,7 +196,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e02.txt"
@@ -206,7 +206,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e01.txt"
@@ -216,7 +216,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e00.txt"
@@ -226,7 +226,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-01.txt"
@@ -236,7 +236,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-02.txt"
@@ -246,7 +246,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-03.txt"
@@ -256,7 +256,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-04.txt"
@@ -266,7 +266,7 @@ configs.extend([
         "maxFiles": 4,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNL_all_ctau1p0e-05.txt"
@@ -280,7 +280,7 @@ configs.extend([
         "maxFiles":-1,
         "trainFraction": 1,
         "header":[
-            "#select (jetorigin_displacement_xy>-3.)",
+            "#select (jetorigin_displacement_xy>-2.)",
             "#select ((isLLP_ANY)>0.5)*((jetorigin_tauDecay_INVISIBLE<0.5) + (jetorigin_tauDecay_NO_TAU>0.5))"
         ],
         "output":"HNLGun.txt"

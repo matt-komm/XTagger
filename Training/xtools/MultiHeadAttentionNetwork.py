@@ -34,12 +34,12 @@ class QKAttentionLayer:
                     bias_initializer='zeros',
                     kernel_regularizer=keras.regularizers.l1(1e-6),
                     name=prefix+'_comb_'+str(i+1)
-                )
+                ),
+                keras.layers.Dropout(0.1,name=prefix+'_comb_dropout_'+str(i+1)),
             ])
             if i<(len(ncomb)-1):
                 self.combLayers.extend([
                     keras.layers.LeakyReLU(alpha=0.1,name=prefix+'_comb_activation_'+str(i+1)),
-                    keras.layers.Dropout(0.1,name=prefix+'_comb_dropout_'+str(i+1)),
                 ])
     
     
@@ -55,12 +55,12 @@ class QKAttentionLayer:
                     bias_initializer='zeros',
                     kernel_regularizer=keras.regularizers.l1(1e-6),
                     name=prefix+'_query_'+str(i+1)
-                )
+                ),
+                keras.layers.Dropout(0.1,name=prefix+'_query_dropout_'+str(i+1)),
             ])
             if i<(len(nqueries)-1):
                 self.queryLayers.extend([
-                    keras.layers.LeakyReLU(alpha=0.1,name=prefix+'_query_activation_'+str(i+1)),
-                    keras.layers.Dropout(0.1,name=prefix+'_query_dropout_'+str(i+1)),
+                    keras.layers.LeakyReLU(alpha=0.1,name=prefix+'_query_activation_'+str(i+1)),    
                 ])
                 
         self.keyLayers = []
@@ -75,12 +75,12 @@ class QKAttentionLayer:
                     bias_initializer='zeros',
                     kernel_regularizer=keras.regularizers.l1(1e-6),
                     name=prefix+'_key_'+str(i+1)
-                )
+                ),
+                keras.layers.Dropout(0.1,name=prefix+'_key_dropout_'+str(i+1)),
             ])
             if i<(len(nkeys)-1):
                 self.keyLayers.extend([
-                    keras.layers.LeakyReLU(alpha=0.1,name=prefix+'_key_activation_'+str(i+1)),
-                    keras.layers.Dropout(0.1,name=prefix+'_key_dropout_'+str(i+1)),
+                    keras.layers.LeakyReLU(alpha=0.1,name=prefix+'_key_activation_'+str(i+1)),     
                 ])
                 
 
@@ -90,11 +90,12 @@ class QKAttentionLayer:
         
         #w = tf.nn.softmax(w,axis=1) # softmax over candidates
         w = tf.nn.sigmoid(w) # sigmoid
+        #w = tf.nn.relu(w)
         return tf.matmul(w,x, transpose_a = True) # returns [batch, ncomb, nfeatures]
         
-    def _tileFeatures(self,x):
+    def _tileFeatures(self,x,n):
         # repeat feature ncomb[-1] times 
-        x = tf.reshape(tf.tile(x,[1,self.ncomb[-1]]),[-1,self.ncomb[-1],x.shape[1]])
+        x = tf.reshape(tf.tile(x,[1,n]),[-1,n,x.shape[1]])
         return x     
     
 
@@ -174,16 +175,20 @@ class QKAttentionLayer:
 
                 
     def getAttentionWeights(self,candidates, globalFeatures=None):
-        combWeights = self.combLayers[0](candidates)
-        for layer in self.combLayers[1:]:
-            combWeights = layer(combWeights)
-             
-        combCandidates = keras.layers.Lambda(lambda x: self._combineCandidates(x[0],x[1]))([candidates,combWeights])
-        
-        if globalFeatures!=None:
-            globalFeatures = keras.layers.Lambda(lambda x: self._tileFeatures(x))(globalFeatures)
-            combCandidates = keras.layers.Concatenate(axis=2)([combCandidates,globalFeatures])
+    
+        if len(self.combLayers)>0:
+            combWeights = self.combLayers[0](candidates)
+            for layer in self.combLayers[1:]:
+                combWeights = layer(combWeights)
+                 
+            combCandidates = keras.layers.Lambda(lambda x: self._combineCandidates(x[0],x[1]))([candidates,combWeights])
+                 
+        else:
+            combCandidates = candidates
             
+        if globalFeatures!=None:
+            globalFeatures = keras.layers.Lambda(lambda x: self._tileFeatures(x,combCandidates.shape.as_list()[1]))(globalFeatures)
+            combCandidates = keras.layers.Concatenate(axis=2)([combCandidates,globalFeatures])
     
         queryResult = self.queryLayers[0](combCandidates)
         for layer in self.queryLayers[1:]:
@@ -292,9 +297,9 @@ class MultiHeadAttentionNetwork(xtools.NominalNetwork):
             ),name="electron_preproc")
         '''
 
-        self.cand_conv = []
+        self.cand_conv1 = []
         for i,filters in enumerate([64,32,32,16]):
-            self.cand_conv.extend([
+            self.cand_conv1.extend([
                 keras.layers.Conv1D(
                     filters,1,
                     strides=1,
@@ -302,15 +307,34 @@ class MultiHeadAttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
-                    name='cpf_conv'+str(i+1)
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    name='cand1_conv'+str(i+1)
                 ),
-                keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
-                keras.layers.Dropout(0.1,name='cpf_dropout'+str(i+1)),
+                keras.layers.LeakyReLU(alpha=0.1,name='cand1_activation'+str(i+1)),
+                keras.layers.Dropout(0.1,name='cand1_dropout'+str(i+1)),
+            ])
+            
+        self.cand_conv2 = []
+        for i,filters in enumerate([32,16]):
+            self.cand_conv2.extend([
+                keras.layers.Conv1D(
+                    filters,1,
+                    strides=1,
+                    padding='same',
+                    use_bias=True,
+                    kernel_initializer='lecun_normal',
+                    bias_initializer='zeros',
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    name='cand2_conv'+str(i+1)
+                ),
+                keras.layers.LeakyReLU(alpha=0.1,name='cand2_activation'+str(i+1)),
+                keras.layers.Dropout(0.1,name='cand2_dropout'+str(i+1)),
             ])
 
             
-        self.cand_qkAttention = QKAttentionLayer("qk",ncomb=[16],nqueries=[64,32,32,16],nkeys=[16],nheads=4)
+        self.cand_qkAttention1 = QKAttentionLayer("cand_qk1",ncomb=[8],nqueries=[64],nkeys=[64],nheads=16)
+        self.cand_qkAttention2 = QKAttentionLayer("cand_qk2",ncomb=[8],nqueries=[32],nkeys=[32],nheads=8)
+        self.p4_qkAttention = QKAttentionLayer("p4_qk",ncomb=[],nqueries=[128],nkeys=[128],nheads=32)
         
 
 
@@ -469,25 +493,22 @@ class MultiHeadAttentionNetwork(xtools.NominalNetwork):
     def addE(self,cand):
         #need to assign a relatively large minimum mass here; otherwise mass calculation leads to nan
         return keras.layers.Lambda(lambda x: 
-            tf.stack([tf.sqrt(tf.square(x[:,:,0])+tf.square(x[:,:,1])+tf.square(x[:,:,2])+0.01),x[:,:,0],x[:,:,1],x[:,:,2]],axis=2)
+            tf.stack([tf.sqrt(tf.square(x[:,:,0])+tf.square(x[:,:,1])+tf.square(x[:,:,2])+1e-8),x[:,:,0],x[:,:,1],x[:,:,2]],axis=2)
         )(cand)
-        
-    def sumComb(self,cand):
-        return keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1,keep_dims=True))(cand)
 
     def calcM(self,cand):
         return keras.layers.Lambda(lambda x:
-            tf.sqrt(tf.nn.relu(tf.square(x[:,:,0])-tf.square(x[:,:,1])-tf.square(x[:,:,2])-tf.square(x[:,:,3]))+0.01)
+            tf.log(tf.sqrt(tf.nn.relu(tf.square(x[:,:,0])-tf.square(x[:,:,1])-tf.square(x[:,:,2])-tf.square(x[:,:,3]))+1e-8))
         )(cand)
         
     def calcPt(self,cand):
         return keras.layers.Lambda(lambda x:
-            tf.sqrt(tf.square(x[:,:,1])+tf.square(x[:,:,2])+0.01)
+            tf.log(tf.sqrt(tf.square(x[:,:,1])+tf.square(x[:,:,2])+1e-4))
         )(cand)
         
-    def calcRap(self,cand):    
+    def calcPzRatio(self,cand):    
         return keras.layers.Lambda(lambda x:
-            0.5*tf.abs(tf.log((x[:,:,0]+x[:,:,3]))/(x[:,:,0]-x[:,:,3]))
+            tf.log(tf.square(x[:,:,3])/(tf.square(x[:,:,1])+tf.square(x[:,:,2])+tf.square(x[:,:,3])+1e-4)+1e-4)
         )(cand)
 
     def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
@@ -504,52 +525,79 @@ class MultiHeadAttentionNetwork(xtools.NominalNetwork):
         cand_features = self.mergeCandidatesSlim([
             cpf,
             npf,
-            muon,
-            electron
+            #muon,
+            #electron
         ])
         
         cand_p4 = keras.layers.Concatenate(axis=1)([
             self.addE(cpf_p4),
             self.addE(npf_p4),
-            self.addE(muon_p4),
-            self.addE(electron_p4) 
+            #self.addE(muon_p4),
+            #self.addE(electron_p4) 
         ])
         
-        cand_values = self.applyLayers(cand_features,self.cand_conv)
-        cand_attention = self.cand_qkAttention.getAttentionWeights(cand_features,global_features)
+        cand_values1 = self.applyLayers(cand_features,self.cand_conv1)
+        cand_attention1 = self.cand_qkAttention1.getAttentionWeights(cand_features,global_features)
+        cand_features1 = self.cand_qkAttention1.applyAttentionToCandidates(cand_values1,cand_attention1)
         
-        cand_values = self.cand_qkAttention.applyAttentionToCandidates(cand_values,cand_attention)
-        cand_p4 = self.cand_qkAttention.applyAttentionToP4(cand_p4,cand_attention)
-        cand_tensor = keras.layers.Flatten()(cand_values)
+        cand_values2 = self.applyLayers(cand_features1,self.cand_conv2)
+        cand_attention2 = self.cand_qkAttention2.getAttentionWeights(cand_features1,global_features)
+        cand_features2 = self.cand_qkAttention2.applyAttentionToCandidates(cand_values2,cand_attention2)
         
-        #cand_p4 = self.sumComb(cand_p4)
+        
+        cand_tensor = keras.layers.Flatten()(cand_features1)
+        cand_tensor = keras.layers.Dropout(0.1,noise_shape=[1,8*16],name="cand_total_dropout")(cand_tensor)
+        
+        
+        p4_attention = self.p4_qkAttention.getAttentionWeights(cand_features,global_features)
+        cand_p4 = self.p4_qkAttention.applyAttentionToP4(cand_p4,p4_attention)
+        
+       
+        
         
         cand_m = self.calcM(cand_p4)
+        cand_m = keras.layers.Dropout(0.1,name="cand_m_dropout")(cand_m)
+        
         cand_pt = self.calcPt(cand_p4)
-        cand_rap = self.calcRap(cand_p4)
+        cand_pt = keras.layers.Dropout(0.1,name="cand_pt_dropout")(cand_pt)
+        
+        cand_pzRatio = self.calcPzRatio(cand_p4)
+        cand_pzRatio = keras.layers.Dropout(0.1,name="cand_pzRatio_dropout")(cand_pzRatio)
         
         sv_features = self.applyLayers(sv,self.sv_conv)
         sv_features = keras.layers.Flatten()(sv_features)
+        sv_features = keras.layers.Dropout(0.1,noise_shape=[1,self.featureDict["sv"]["max"]*12],name="sv_total_dropout")(sv_features)
         
         muon_features = self.applyLayers(muon,self.muon_conv)
         muon_features = keras.layers.Flatten()(muon_features)
+        muon_features = keras.layers.Dropout(0.1,noise_shape=[1,self.featureDict["muon"]["max"]*16],name="muon_total_dropout")(muon_features)
         
         electron_features = self.applyLayers(electron,self.electron_conv)
         electron_features = keras.layers.Flatten()(electron_features)
+        electron_features = keras.layers.Dropout(0.1,noise_shape=[1,self.featureDict["electron"]["max"]*16],name="electron_total_dropout")(electron_features)
 
-        full_features = self.applyLayers([cand_m,cand_pt,cand_rap,cand_tensor,global_features,sv_features,muon_features,electron_features], self.full_features)
+
+        full_features = self.applyLayers([
+            gen,
+            globalvars,
+            cand_m,cand_pt,cand_pzRatio,
+            cand_tensor,
+            sv_features,
+            muon_features,
+            electron_features
+        ], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_tensor,npf_tensor,sv_conv,gen], self.full_features)
 
-        return full_features
+        return full_features,p4_attention,cand_p4,cand_m,cand_pt,cand_pzRatio
         
     def predictClass(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
-        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4)
+        full_features,p4Att,p4,m,pt,pzratio = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4)
         class_prediction = self.applyLayers(full_features,self.class_prediction)
-        return class_prediction
+        return class_prediction,p4Att,p4,m,pt,pzratio
         
         
     def makeClassModel(self):
-        predictedClass = self.predictClass(
+        predictedClass,p4Att,p4,m,pt,pzratio = self.predictClass(
             self.input_globalvars,
             self.input_cpf,
             self.input_npf,
@@ -577,10 +625,32 @@ class MultiHeadAttentionNetwork(xtools.NominalNetwork):
                 self.input_electron_p4
             ],
             outputs=[
-                predictedClass
+                predictedClass,
             ]
         )
-        return model
+        
+        modelDebug = keras.models.Model(
+            inputs=[
+                self.input_gen,
+                self.input_globalvars,
+                self.input_cpf,
+                self.input_npf,
+                self.input_sv,
+                self.input_muon,
+                self.input_electron,
+                self.input_cpf_p4,
+                self.input_npf_p4,
+                self.input_muon_p4,
+                self.input_electron_p4
+            ],
+            outputs=[
+                p4Att,p4,m,pt,pzratio
+            ]
+        )
+        
+        
+        
+        return model,modelDebug
 
 network = MultiHeadAttentionNetwork
 

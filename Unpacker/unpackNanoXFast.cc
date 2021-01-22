@@ -950,8 +950,6 @@ class NanoXTree
             tree_->SetBranchAddress("Jet_pt",&Jet_pt);
             tree_->SetBranchAddress("Jet_jetId",&Jet_jetId);
             tree_->SetBranchAddress("Jet_nConstituents",&Jet_nConstituents);
-            tree_->SetBranchAddress("Jet_genJetIdx", &Jet_genJetIdx);
-            tree_->SetBranchAddress("GenJet_pt", &GenJet_pt);
 
             tree_->SetBranchAddress("Jet_muonIdx1",&Jet_muonIdx1);
             tree_->SetBranchAddress("Jet_muonIdx2",&Jet_muonIdx2);
@@ -970,6 +968,9 @@ class NanoXTree
 
             if (addTruth)
             {
+                tree_->SetBranchAddress("Jet_genJetIdx", &Jet_genJetIdx);
+                tree_->SetBranchAddress("GenJet_pt", &GenJet_pt);
+            
                 tree_->SetBranchAddress("njetorigin",&njetorigin);
                 tree_->SetBranchAddress("jetorigin_jetIdx",&jetorigin_jetIdx);
                 
@@ -1257,10 +1258,9 @@ class NanoXTree
 
             if (Jet_nConstituents[jet]<2) return false;
 
-            
-            if (jetLabelBranchMap["jetorigin_isPrompt_E"]->getFloat(indexOrigin)<0.5 
+            if (addTruth_ and (jetLabelBranchMap["jetorigin_isPrompt_E"]->getFloat(indexOrigin)<0.5 
                 and jetLabelBranchMap["jetorigin_isPrompt_MU"]->getFloat(indexOrigin)<0.5 
-                and jetLabelBranchMap["jetorigin_isPrompt_TAU"]->getFloat(indexOrigin)<0.5)
+                and jetLabelBranchMap["jetorigin_isPrompt_TAU"]->getFloat(indexOrigin)<0.5))
             {
                 TLorentzVector jetP4(0,0,0,0);
                 jetP4.SetPtEtaPhiM(Jet_pt[jet],Jet_eta[jet],Jet_phi[jet],0.);
@@ -1448,7 +1448,7 @@ class NanoXTree
 
         int getJetClass(unsigned int jet)
         {
-            if (not addTruth_) return 0; //default class
+            if (not addTruth_) return nClasses-1; //default class = isUndefined
 
             int indexOrigin = -1;
             for (int ijet = 0; ijet < nJet; ++ijet)

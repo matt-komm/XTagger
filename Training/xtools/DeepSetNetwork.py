@@ -11,7 +11,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
         xtools.NominalNetwork.__init__(self,featureDict)
 
         self.cpf_conv = []
-        for i,filters in enumerate([64,32,32,8]):
+        for i,filters in enumerate([64,32,32,16]):
             self.cpf_conv.extend([
                 keras.layers.Conv1D(
                     filters,1,
@@ -31,7 +31,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
 
         #### NPF ####
         self.npf_conv = []
-        for i,filters in enumerate([32,16,16,4]):
+        for i,filters in enumerate([32,16,16,8]):
             self.npf_conv.extend([keras.layers.Conv1D(
                     filters,1,
                     strides=1,
@@ -64,7 +64,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
                 keras.layers.LeakyReLU(alpha=0.1,name="sv_activation"+str(i+1)),
                 keras.layers.Dropout(0.1,name="sv_dropout"+str(i+1)),
             ])
-        self.sv_conv.append(keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1),name="sv_sum"))
+        self.sv_conv.append(keras.layers.Flatten())
 
 
         #### Muons ####
@@ -83,8 +83,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
                 keras.layers.LeakyReLU(alpha=0.1,name="muon_activation"+str(i+1)),
                 keras.layers.Dropout(0.1,name="muon_dropout"+str(i+1)),
             ])
-        self.muon_conv.append(keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1),name="muon_sum"))
-
+        self.muon_conv.append(keras.layers.Flatten())
 
         #### Electron ####
         self.electron_conv = []
@@ -102,8 +101,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
                 keras.layers.LeakyReLU(alpha=0.1,name="electron_activation"+str(i+1)),
                 keras.layers.Dropout(0.1,name="electron_dropout"+str(i+1)),
             ])
-        self.electron_conv.append(keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1),name="electron_sum"))
-
+        self.electron_conv.append(keras.layers.Flatten())
 
         #### Features ####
         self.full_features = [keras.layers.Concatenate()]
@@ -148,7 +146,7 @@ class DeepSetNetwork(xtools.NominalNetwork):
     def returnsLogits(self):
         return False
 
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen=None):
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
         globalvars_preproc = self.global_preproc(globalvars)
 
         cpf_conv = self.applyLayers(self.cpf_preproc(cpf),self.cpf_conv)

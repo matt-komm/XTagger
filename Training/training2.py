@@ -12,6 +12,7 @@ import logging
 import math
 import xtools
 import os
+import copy
 import argparse
 import time
 import shutil
@@ -59,11 +60,9 @@ parser.add_argument('-m', '--model', action='store', help='model file',
 parser.add_argument('-r', '--resume', type=int, help='resume training at given epoch',
                     default=0, dest='resume')
 parser.add_argument('--lambda', type=float,help='domain loss weight',
-                    default=0.3,dest='lambda')
+                    default=30.,dest='lambda0')
 parser.add_argument('--lr', type=float,help='initial learning rate',
                     default=0.01,dest='lr')  
-parser.add_argument('--lrScan', help='scan for best learning rate',
-                    default=False,dest='lrScan', action='store_true')
 parser.add_argument('--kappa', type=float,help='learning rate decay val',
                     default=0.01,dest='kappa')
 
@@ -99,11 +98,12 @@ logging.info("Output folder: %s"%args.outputFolder)
 logging.info("Epochs: %i"%args.nepochs)
 logging.info("Batch size: %i"%args.batchSize)
 logging.info("Random seed: %i"%args.seed)
-if args.lrScan:
-    logging.info("Will scan for optimal initial learning rate")
-else:
-    logging.info("Learning rate: %.3e"%args.lr)
+logging.info("Learning rate: %.3e"%args.lr)
 logging.info("Learning rate decay: %.3e"%args.kappa)
+
+useDA = len(args.trainFilesDA)>0 and len(args.testFilesDA)>0
+logging.info("Use DA: "+"True" if useDA else "False")
+logging.info("Lambda0: %.1f"%(args.lambda0))
 
 random.seed(args.seed)
 np.random.seed(args.seed)
@@ -117,9 +117,21 @@ for f in args.trainFiles:
 testInputs = xtools.InputFiles(maxFiles=args.maxFiles)
 for f in args.testFiles:
     testInputs.addFileList(f)
-
+    
 logging.info("Training files %i"%trainInputs.nFiles())
 logging.info("Testing files %i"%testInputs.nFiles())
+    
+if useDA:
+    trainDAInputs = xtools.InputFiles(maxFiles=args.maxFiles)
+    for f in args.trainFilesDA:
+        trainDAInputs.addFileList(f)
+    testDAInputs = xtools.InputFiles(maxFiles=args.maxFiles)
+    for f in args.testFilesDA:
+        testDAInputs.addFileList(f)
+
+    logging.info("Training DA files %i"%trainDAInputs.nFiles())
+    logging.info("Testing DA files %i"%testDAInputs.nFiles())
+
 
 #TODO make dict and read title/name from file saved as comments
 perfInputList = []
@@ -152,29 +164,58 @@ weights.save(os.path.join(outputFolder,"weights.root"))
 pipelineTrain = xtools.Pipeline(
     trainInputs.getFileList(),
     featureDict,
-    resampleWeights.getLabelNameList(),
-    os.path.join(outputFolder,"weights.root"),
-    args.batchSize
+    batchSize=args.batchSize,
+    resample=True,
+    weightFile=os.path.join(outputFolder,"weights.root"),
+    labelNameList=resampleWeights.getLabelNameList(),
 )
 
 pipelineTest = xtools.Pipeline(
     testInputs.getFileList(),
     featureDict,
-    resampleWeights.getLabelNameList(),
-    os.path.join(outputFolder,"weights.root"),
-    args.batchSize
+    batchSize=args.batchSize,
+    resample=True,
+    weightFile=os.path.join(outputFolder,"weights.root"),
+    labelNameList=resampleWeights.getLabelNameList(),
 )
+
+if useDA:
+    featureDictDA = copy.deepcopy(featureDict)
+    del featureDictDA["gen"]
+    featureDictDA["truth"] = {
+        "weights":[
+            "1",
+        ],
+        "branches":[
+            "isData",
+        ]
+    }
+    featureDictDA['xsecweight'] = {
+        "branches":[
+            "xsecweight",
+        ]
+    }
+    
+    pipelineTrainDA = xtools.Pipeline(
+        trainDAInputs.getFileList(),
+        featureDictDA,
+        batchSize=args.batchSize,
+        repeat=None, #unlimited
+    )
+
+    pipelineTestDA = xtools.Pipeline(
+        testDAInputs.getFileList(),
+        featureDictDA,
+        batchSize=args.batchSize,
+        repeat=None, #unlimited
+    )
 
 perfPipelines = []
 for perfInputs in perfInputList:
     perfPipelines.append(xtools.Pipeline(
         perfInputs.getFileList(),
         featureDict,
-        resampleWeights.getLabelNameList(),
-        os.path.join(outputFolder,"weights.root"),
-        batchSize=min(args.batchSize,max(250,int(round(perfInputs.nJets()/100.)))),
-        resample=False,
-        maxThreads=1
+        batchSize=min(args.batchSize,max(1000,int(round(perfInputs.nJets()/100.)))),
     ))
 
 
@@ -189,69 +230,68 @@ def resetSession():
 signal.signal(signal.SIGINT, lambda signum, frame: [resetSession(),sys.exit(1)])
 
 
-if args.lrScan and args.resume==0:
-    epochStart = -1
-    lossPerLR = {}
-elif args.resume>0:
-    epochStart = args.resume
-else:
-    epochStart = 0
-
-for epoch in range(epochStart, args.nepochs):
+for epoch in range(args.resume, args.nepochs):
     start_time_epoch = time.time()
 
     Network = imp.load_source('Network', os.path.join(args.outputFolder,"Network.py")).network
 
     network = Network(featureDict)
-    #modelClassTrain = network.makeClassModelWithAlt()
+    modelClassTrain = network.makeClassModelWithSmearing()
     modelClass = network.makeClassModel()
+    
+    lrDecayDelay = 10
 
-
-    if args.lrScan and epoch==-1:
-        learningRate = 1e-6
-    else:
-        learningRateDecay = 1./(1.+args.kappa*max(0,epoch-5)**1.5)
-        learningRate = args.lr*learningRateDecay
+    learningRateDecay = 1./(1.+args.kappa*max(0,epoch-lrDecayDelay)**1.5)
+    learningRate = args.lr*learningRateDecay
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
-
-    #TODO: keras might be wrong here: ytrue <-> ypredicted needs to be swapped
-    def logit_loss(ytrue,ypredicted):
-        #tf.print(ytrue)
-        return tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
-            labels=ytrue,
-            logits=ypredicted,
-        ))
-        
-    def llp_loss(ytrue,ypredicted):
-        return 1.*keras.losses.categorical_crossentropy(ytrue,ypredicted)+\
-               0.*keras.losses.binary_crossentropy(tf.reduce_sum(ytrue[:,8:],axis=1,keepdims=True),tf.reduce_sum(ypredicted[:,8:],axis=1,keepdims=True))
-
-    '''
+    
     modelClassTrain.compile(
         optClass,
-        loss=logit_loss if network.returnsLogits() else llp_loss,
+        loss=[keras.losses.categorical_crossentropy],
         metrics=[keras.metrics.categorical_accuracy],
         loss_weights=[1.]
     )
-    '''
+    
+    if useDA:
+        daWeight = args.lambda0*(2./(1+math.exp(-0.1*max(0,epoch-1)))-1.)
+        optDA = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
+        modelFullTrain = network.makeFullModelWithSmearing()
+
+        modelFullTrain.compile(
+            optDA,
+            loss=[keras.losses.categorical_crossentropy,keras.losses.binary_crossentropy],
+            metrics=[keras.metrics.categorical_accuracy,keras.metrics.binary_accuracy],
+            loss_weights=[1.,daWeight]
+        )
+    
     modelClass.compile(
         optClass,
-        loss=logit_loss if network.returnsLogits() else keras.losses.categorical_crossentropy,
+        loss=[keras.losses.categorical_crossentropy],
         metrics=[keras.metrics.categorical_accuracy],
         loss_weights=[1.]
     )
 
     if epoch==0:
         modelClass.summary()
-
-    train_batch = pipelineTrain.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 8:],axis=1) > 0.5)
-    test_batch = pipelineTest.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 8:],axis=1) > 0.5)
+    
+    firstLLPIdx = featureDict['truth']['firstLLPIdx']
+    train_batch = pipelineTrain.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, firstLLPIdx:],axis=1) > 0.5)
+    test_batch = pipelineTest.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, firstLLPIdx:],axis=1) > 0.5)
     perf_batches = []
     for perfPipeline in perfPipelines:
-        perf_batches.append(perfPipeline.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, 8:],axis=1) > 0.5))
+        perf_batches.append(perfPipeline.init())
+
+    if useDA:
+        train_da_batch = pipelineTrainDA.init()
+        test_da_batch = pipelineTestDA.init()
+
 
     if epoch==0:
         distributions = resampleWeights.makeDistribution()
+        
+        daHistPlotter = xtools.HistPlotter('da',bins=np.linspace(10,250,51),xaxis="Jet pT (GeV)",yaxis="#Jets")
+        daHistPlotter.makeGroup("mc",label="MC",lineColor=ROOT.kAzure-4,drawOptions="HIST")
+        daHistPlotter.makeGroup("data",label="Data",markerStyle=20,markerSize=1.3,drawOptions="PE")
 
     init_op = tf.group(
         tf.global_variables_initializer(),
@@ -280,20 +320,27 @@ for epoch in range(epochStart, args.nepochs):
         while not coord.should_stop():
             step += 1
             train_batch_value = sess.run(train_batch)
-
-            badValue = False
+            
             for k,elem in train_batch_value.iteritems():
                 train_batch_value[k] = np.nan_to_num(train_batch_value[k])
                 if k=='num':
                     continue
                 if not np.isfinite(elem).all():
                     logging.error("Found non finite training value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
-                    badValue = True
                 if np.any(elem>1e8) or np.any(elem<-1e8):
                     logging.error("Found large training value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
-                    badValue = True
-                #TODO: learn clipping and put into model
                 
+            if useDA:
+                train_da_batch_value = sess.run(train_da_batch)
+                for k,elem in train_da_batch_value.iteritems():
+                    train_da_batch_value[k] = np.nan_to_num(train_da_batch_value[k])
+                    if k=='num':
+                        continue
+                    if not np.isfinite(elem).all():
+                        logging.error("Found non finite training da value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+                    if np.any(elem>1e8) or np.any(elem<-1e8):
+                        logging.error("Found large training da value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    
 
             if epoch==0:
                 #featurePlotter.fill(train_batch_value)
@@ -304,67 +351,58 @@ for epoch in range(epochStart, args.nepochs):
                     train_batch_value['globalvars'][:,1],
                     train_batch_value['gen'][:,0],
                 )
-            #smearBkgGen = np.expand_dims((np.sum(train_batch_value['truth'][:,8:],axis=1)>0.5)*np.random.normal(0,1,size=train_batch_value['truth'].shape[0]),axis=1)
-            #print train_batch_value
+                
+            
+            smearBkgGen = np.expand_dims((np.sum(train_batch_value['truth'][:,:firstLLPIdx],axis=1)>0.5)*np.random.normal(0.,1.,size=train_batch_value['truth'].shape[0]),axis=1)
+
             train_inputs_class = [
                 train_batch_value['gen'],
-                #train_batch_value['gen']+smearBkgGen,
+                train_batch_value['gen']+smearBkgGen,
                 train_batch_value['globalvars'],
                 train_batch_value['cpf'],
                 train_batch_value['npf'],
                 train_batch_value['sv'],
                 train_batch_value['muon'],
                 train_batch_value['electron'],
-                
-                train_batch_value['cpf_p4'],
-                train_batch_value['npf_p4'],
-                train_batch_value['muon_p4'],
-                train_batch_value['electron_p4'],
             ]
-
-
-            train_outputs = modelClass.train_on_batch(train_inputs_class,train_batch_value['truth'])
-            train_loss+=train_outputs[0]
             
-            if args.lrScan and epoch==-1:
-                k = math.log10(learningRate)
-                if not lossPerLR.has_key(k):
-                    lossPerLR[k] = 0.
-                lossPerLR[k] += train_outputs[0]
-                if step%4==0:
-                    logging.info("LR scan step %i: lr=%.4e, loss=%.4f, accuracy=%.2f%%"%(step,learningRate,train_outputs[0],100.*train_outputs[1]))
-                    learningRate = 10**(-5+5*step/100.) #scan from 1e-5 to 1e0 in 4 steps
-                    K.set_value(modelClass.optimizer.lr, learningRate)
-            else:
-                if step%10==0:
-                    logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*train_outputs[1]))
-                    
-            if args.lrScan and epoch==-1 and step>=100:
-                break
+            if useDA:
+                train_inputs_domain = [
+                    train_da_batch_value['globalvars'],
+                    train_da_batch_value['cpf'],
+                    train_da_batch_value['npf'],
+                    train_da_batch_value['sv'],
+                    train_da_batch_value['muon'],
+                    train_da_batch_value['electron'],
+                ]
+                train_outputs = modelFullTrain.train_on_batch(
+                    train_inputs_class+train_inputs_domain,
+                    [train_batch_value['truth'],train_da_batch_value['truth']],
+                    sample_weight=[
+                        np.ones(train_batch_value['truth'].shape[0]),
+                        train_da_batch_value['xsecweight'][:,0],
+                    ]
+                )
+                #print train_outputs
+                train_loss+=train_outputs[0]
+                acc = train_outputs[3]
                 
+            else:
+                train_outputs = modelClassTrain.train_on_batch(
+                    train_inputs_class,
+                    train_batch_value['truth']
+                )
+                train_loss+=train_outputs[0]
+                acc = train_outputs[1]
+                
+
+            if step%10==0:
+                logging.info("Training step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,train_outputs[0],100.*acc))
+
 
     except tf.errors.OutOfRangeError:
         pass
 
-    if args.lrScan:
-        if epoch==-1 and step<100:
-            raise Exception("Not enough steps to scan LR range") 
-        else:
-            lrValues = np.array([sorted(lossPerLR.keys())])
-            lossValues = np.array([lossPerLR[k] for k in sorted(lossPerLR.keys())])
-            print lrValues
-            print lossValues
-            #for _ in range(10):
-            #    lossValues = np.convolve(lossValues,[0.1,0.8,0.1],'same')
-            #print lossValues
-            for i in range(len(lossValues)-1):
-                lossValues[i] = lossValues[i]/lossValues[i+1]
-            #lossValues = np.convolve(lossValues,[1.,-2,1.])
-            print lossValues
-            
-            logging.info('Done scanning for optimal LR')
-            resetSession()
-            continue
 
     train_loss = train_loss/step
     time_train = (time.time()-time_train)/step
@@ -409,11 +447,6 @@ for epoch in range(epochStart, args.nepochs):
                 test_batch_value['muon'],
                 test_batch_value['electron'],
                 
-                test_batch_value['cpf_p4'],
-                test_batch_value['npf_p4'],
-                test_batch_value['muon_p4'],
-                test_batch_value['electron_p4'],
-                
             ]
             
             test_outputs = modelClass.test_on_batch(test_inputs_class,test_batch_value['truth'])
@@ -423,8 +456,9 @@ for epoch in range(epochStart, args.nepochs):
                 testMonitor.analyze_batch(test_batch_value,test_batch_prediction)
                 
             test_loss+=test_outputs[0]
+            acc = test_outputs[1]
             if step%10==0:
-                logging.info("Testing step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,test_outputs[0],100.*test_outputs[1]))
+                logging.info("Testing step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,test_outputs[0],100.*acc))
 
 
     except tf.errors.OutOfRangeError:
@@ -481,10 +515,6 @@ for epoch in range(epochStart, args.nepochs):
                         perf_batch_value['muon'],
                         perf_batch_value['electron'],
                         
-                        perf_batch_value['cpf_p4'],
-                        perf_batch_value['npf_p4'],
-                        perf_batch_value['muon_p4'],
-                        perf_batch_value['electron_p4'],
                     ]
                     perf_batch_prediction = modelClass.predict_on_batch(perf_inputs_class)
                     perfMonitor.analyze_batch(perf_batch_value,perf_batch_prediction)

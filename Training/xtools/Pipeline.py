@@ -8,10 +8,10 @@ class Pipeline():
         self,
         files, 
         features, 
-        labelNameList,
-        weightFile,
-        batchSize, 
-        resample=True,
+        batchSize=1000,
+        resample=False,
+        weightFile=None,
+        labelNameList=None,
         repeat=1,
         bagging=1.,
         maxThreads = 6
@@ -27,7 +27,7 @@ class Pipeline():
         self.maxThreads = maxThreads
     
 
-    def init(self,isLLPFct):
+    def init(self,isLLPFct=None):
         with tf.device('/cpu:0'):
             if self.bagging>0. and self.bagging<1.:
                 inputFileList = random.sample(self.files,int(max(1,round(len(self.files)*self.bagging))))

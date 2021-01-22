@@ -16,6 +16,10 @@ class NominalNetwork():
             shape=(len(self.featureDict["gen"]["branches"]),),
             name="input_gen"
         )
+        self.input_gen_alt = keras.layers.Input(
+            shape=(len(self.featureDict["gen"]["branches"]),),
+            name="input_gen_alt"
+        )
         self.input_globalvars = keras.layers.Input(
             shape=(len(self.featureDict["globalvars"]["branches"]),),
             name="input_global"
@@ -24,17 +28,9 @@ class NominalNetwork():
             shape=(self.featureDict["cpf"]["max"], len(self.featureDict["cpf"]["branches"])),
             name="input_cpf"
         )
-        self.input_cpf_p4 = keras.layers.Input(
-            shape=(self.featureDict["cpf_p4"]["max"], len(self.featureDict["cpf_p4"]["branches"])),
-            name="input_cpf_p4"
-        )
         self.input_npf = keras.layers.Input(
             shape=(self.featureDict["npf"]["max"], len(self.featureDict["npf"]["branches"])),
             name="input_npf"
-        )
-        self.input_npf_p4 = keras.layers.Input(
-            shape=(self.featureDict["npf_p4"]["max"], len(self.featureDict["npf_p4"]["branches"])),
-            name="input_npf_p4"
         )
         self.input_sv = keras.layers.Input(
             shape=(self.featureDict["sv"]["max"], len(self.featureDict["sv"]["branches"])),
@@ -44,18 +40,60 @@ class NominalNetwork():
             shape=(self.featureDict["muon"]["max"], len(self.featureDict["muon"]["branches"])),
             name="input_muon"
         )
-        self.input_muon_p4 = keras.layers.Input(
-            shape=(self.featureDict["muon_p4"]["max"], len(self.featureDict["muon_p4"]["branches"])),
-            name="input_muon_p4"
-        )
         self.input_electron = keras.layers.Input(
             shape=(self.featureDict["electron"]["max"], len(self.featureDict["electron"]["branches"])),
             name="input_electron"
+        )
+        
+        
+        
+        self.input_da_globalvars = keras.layers.Input(
+            shape=(len(self.featureDict["globalvars"]["branches"]),),
+            name="input_da_global"
+        )
+        self.input_da_cpf = keras.layers.Input(
+            shape=(self.featureDict["cpf"]["max"], len(self.featureDict["cpf"]["branches"])),
+            name="input_da_cpf"
+        )
+        self.input_da_npf = keras.layers.Input(
+            shape=(self.featureDict["npf"]["max"], len(self.featureDict["npf"]["branches"])),
+            name="input_da_npf"
+        )
+        self.input_da_sv = keras.layers.Input(
+            shape=(self.featureDict["sv"]["max"], len(self.featureDict["sv"]["branches"])),
+            name="input_da_sv"
+        )
+        self.input_da_muon = keras.layers.Input(
+            shape=(self.featureDict["muon"]["max"], len(self.featureDict["muon"]["branches"])),
+            name="input_da_muon"
+        )
+        self.input_da_electron = keras.layers.Input(
+            shape=(self.featureDict["electron"]["max"], len(self.featureDict["electron"]["branches"])),
+            name="input_da_electron"
+        )
+        
+        
+        
+        
+        '''
+        self.input_npf_p4 = keras.layers.Input(
+            shape=(self.featureDict["npf_p4"]["max"], len(self.featureDict["npf_p4"]["branches"])),
+            name="input_npf_p4"
+        )
+        self.input_cpf_p4 = keras.layers.Input(
+            shape=(self.featureDict["cpf_p4"]["max"], len(self.featureDict["cpf_p4"]["branches"])),
+            name="input_cpf_p4"
+        )
+        self.input_muon_p4 = keras.layers.Input(
+            shape=(self.featureDict["muon_p4"]["max"], len(self.featureDict["muon_p4"]["branches"])),
+            name="input_muon_p4"
         )
         self.input_electron_p4 = keras.layers.Input(
             shape=(self.featureDict["electron_p4"]["max"], len(self.featureDict["electron_p4"]["branches"])),
             name="input_electron_p4"
         )
+        '''
+        
 
 
         #### CPF ####
@@ -231,6 +269,40 @@ class NominalNetwork():
         ])
         if not self.lrp:
             self.class_prediction.append(keras.layers.Softmax(name="class_softmax"))
+            
+            
+            
+        def gradientReverse(x):
+            backward = tf.negative(x)
+            forward = tf.identity(x)
+            return (backward + tf.stop_gradient(forward - backward))
+            
+        self.domain_prediction = [
+            keras.layers.Lambda(gradientReverse,name='domain_gradreverse')
+        ]
+        for i,nodes in enumerate([50,50]):
+            self.domain_prediction.extend([
+                keras.layers.Dense(
+                    nodes,
+                    kernel_initializer='lecun_normal',
+                    bias_initializer='zeros',
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    name="domain_dense"+str(i+1)
+                ),
+                keras.layers.LeakyReLU(alpha=0.1,name="domain_activation"+str(i+1)),
+                keras.layers.Dropout(0.1,name="domain_dropout"+str(i+1)),
+            ])
+        self.domain_prediction.extend([
+            keras.layers.Dense(
+                1,
+                kernel_initializer='lecun_normal',
+                bias_initializer='zeros',
+                kernel_regularizer=keras.regularizers.l1(1e-6),
+                activation = 'sigmoid',
+                name="domain_final"
+            )
+        ])
+        
 
     def returnsLogits(self):
         return False
@@ -264,29 +336,55 @@ class NominalNetwork():
         for layer in layerList[1:]:
             output = layer(output)
         return output
+        
+    def addToConvFeatures(self,conv,features):
+        def tileFeatures(x):
+            x = tf.reshape(tf.tile(features,[1,conv.shape[1]]),[-1,conv.shape[1],x.shape[1]])
+            return x
+            
+        tiled = keras.layers.Lambda(tileFeatures)(features)
+        return keras.layers.Concatenate(axis=2)([conv,tiled])
 
 
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
-        globalvars_preproc = self.global_preproc(globalvars)
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen):
+        globalvars = self.global_preproc(globalvars)
+        cpf = self.cpf_preproc(cpf)
+        npf = self.npf_preproc(npf)
+        sv = self.sv_preproc(sv)
+        muon = self.muon_preproc(muon)
+        electron = self.electron_preproc(electron)
+        
+        #global_features = keras.layers.Concatenate(axis=1)([globalvars,gen])
+        
+        cpf = self.addToConvFeatures(cpf,gen)
+        npf = self.addToConvFeatures(npf,gen)
+        sv = self.addToConvFeatures(sv,gen)
+        muon = self.addToConvFeatures(muon,gen)
+        electron = self.addToConvFeatures(electron,gen)
 
-        cpf_conv = self.applyLayers(self.cpf_preproc(cpf),self.cpf_conv)
-        npf_conv = self.applyLayers(self.npf_preproc(npf),self.npf_conv)
-        sv_conv = self.applyLayers(self.sv_preproc(sv),self.sv_conv)
-        muon_conv = self.applyLayers(self.muon_preproc(muon),self.muon_conv)
-        electron_conv = self.applyLayers(self.electron_preproc(electron),self.electron_conv)
+        cpf_conv = self.applyLayers(cpf,self.cpf_conv)
+        npf_conv = self.applyLayers(npf,self.npf_conv)
+        sv_conv = self.applyLayers(sv,self.sv_conv)
+        muon_conv = self.applyLayers(muon,self.muon_conv)
+        electron_conv = self.applyLayers(electron,self.electron_conv)
 
-        full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,muon_conv,electron_conv,gen], self.full_features)
+        full_features = self.applyLayers([globalvars,cpf_conv,npf_conv,sv_conv,muon_conv,electron_conv,gen], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,muon_conv,gen], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,gen], self.full_features)
 
         return full_features
 
-    def predictClass(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
-        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4)
+    def predictClass(self,globalvars,cpf,npf,sv,muon,electron,gen):
+        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen)
         class_prediction = self.applyLayers(full_features,self.class_prediction)
         return class_prediction
+        
+    def predictDomain(self,globalvars,cpf,npf,sv,muon,electron,gen):
+        full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen)
+        domain_prediction = self.applyLayers(full_features,self.domain_prediction)
+        return domain_prediction
 
-    def makeClassModel(self):
+    def makeClassModel(self,genSmearing=False):    
         predictedClass = self.predictClass(
             self.input_globalvars,
             self.input_cpf,
@@ -295,10 +393,6 @@ class NominalNetwork():
             self.input_muon,
             self.input_electron,
             self.input_gen,
-            self.input_cpf_p4,
-            self.input_npf_p4,
-            self.input_muon_p4,
-            self.input_electron_p4
         )
         model = keras.models.Model(
             inputs=[
@@ -309,15 +403,112 @@ class NominalNetwork():
                 self.input_sv,
                 self.input_muon,
                 self.input_electron,
-                self.input_cpf_p4,
-                self.input_npf_p4,
-                self.input_muon_p4,
-                self.input_electron_p4
             ],
             outputs=[
                 predictedClass
             ]
         )
         return model
+    
+    def makeClassModelWithSmearing(self):
+        predictedClass = self.predictClass(
+            self.input_globalvars,
+            self.input_cpf,
+            self.input_npf,
+            self.input_sv,
+            self.input_muon,
+            self.input_electron,
+            self.input_gen,
+        )
+        
+        predictedClassAlt = self.predictClass(
+            self.input_globalvars,
+            self.input_cpf,
+            self.input_npf,
+            self.input_sv,
+            self.input_muon,
+            self.input_electron,
+            self.input_gen_alt,
+        )
+        
+        
+        model = keras.models.Model(
+            inputs=[
+                self.input_gen,
+                self.input_gen_alt,
+                self.input_globalvars,
+                self.input_cpf,
+                self.input_npf,
+                self.input_sv,
+                self.input_muon,
+                self.input_electron,
+            ],
+            outputs=[
+                predictedClass
+            ]
+        )
+        model.add_loss(tf.reduce_mean(tf.square(predictedClass-predictedClassAlt)))
+        return model
+        
+    def makeFullModelWithSmearing(self):
+        predictedClass = self.predictClass(
+            self.input_globalvars,
+            self.input_cpf,
+            self.input_npf,
+            self.input_sv,
+            self.input_muon,
+            self.input_electron,
+            self.input_gen,
+        )
+        
+        predictedClassAlt = self.predictClass(
+            self.input_globalvars,
+            self.input_cpf,
+            self.input_npf,
+            self.input_sv,
+            self.input_muon,
+            self.input_electron,
+            self.input_gen_alt,
+        )
+        
+        
+        predictedDomain = self.predictDomain(
+            self.input_da_globalvars,
+            self.input_da_cpf,
+            self.input_da_npf,
+            self.input_da_sv,
+            self.input_da_muon,
+            self.input_da_electron,
+            self.input_gen,
+        )
+        
+        
+        model = keras.models.Model(
+            inputs=[
+                self.input_gen,
+                self.input_gen_alt,
+                self.input_globalvars,
+                self.input_cpf,
+                self.input_npf,
+                self.input_sv,
+                self.input_muon,
+                self.input_electron,
+                
+                self.input_da_globalvars,
+                self.input_da_cpf,
+                self.input_da_npf,
+                self.input_da_sv,
+                self.input_da_muon,
+                self.input_da_electron,
+            ],
+            outputs=[
+                predictedClass,
+                predictedDomain
+            ]
+        )
+        model.add_loss(tf.reduce_mean(tf.square(predictedClass-predictedClassAlt)))
+        return model
+        
+        
 
 network = NominalNetwork

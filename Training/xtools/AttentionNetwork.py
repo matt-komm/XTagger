@@ -22,7 +22,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name='cpf_conv'+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
@@ -39,7 +39,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name='cpf_attention'+str(i+1)
                 ),
             ])
@@ -64,7 +64,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name="npf_conv"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
@@ -80,7 +80,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name="npf_attention"+str(i+1)
                 ),
             ])
@@ -111,7 +111,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name="features_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
@@ -126,7 +126,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l2(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-6),
                     name="class_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
@@ -137,7 +137,7 @@ class AttentionNetwork(xtools.NominalNetwork):
                 self.nclasses,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l2(1e-6),
+                kernel_regularizer=keras.regularizers.l1(1e-6),
                 name="class_nclasses"
             ),
             keras.layers.Softmax(name="class_softmax")
@@ -160,17 +160,24 @@ class AttentionNetwork(xtools.NominalNetwork):
         #result = tf.constant(0,dtype=tf.float32,shape=[tf.getShape(features)[0],attention.shape[1],features.shape[2]
 
 
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen=None):
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
         globalvars_preproc = self.global_preproc(globalvars)
         
         global_features = keras.layers.Concatenate(axis=1)([globalvars_preproc,gen])
-
-        cpf_features = self.addToConvFeatures(self.cpf_preproc(cpf),global_features)
-        npf_features = self.addToConvFeatures(self.npf_preproc(npf),global_features)
-        sv_features = self.addToConvFeatures(self.sv_preproc(sv),global_features)
-        muon_features = self.addToConvFeatures(self.muon_preproc(muon),global_features)
-        electron_features = self.addToConvFeatures(self.electron_preproc(electron),global_features)
-
+        
+        cpf_features = self.cpf_preproc(cpf)
+        npf_features = self.npf_preproc(npf)
+        sv_features = self.sv_preproc(sv)
+        muon_features = self.muon_preproc(muon)
+        electron_features = self.electron_preproc(electron)
+        '''
+        cpf_features = self.addToConvFeatures(cpf,global_features)
+        npf_features = self.addToConvFeatures(npf,global_features)
+        sv_features = self.addToConvFeatures(sv,global_features)
+        muon_features = self.addToConvFeatures(muon,global_features)
+        electron_features = self.addToConvFeatures(electron,global_features)
+        '''
+        
         cpf_conv = self.applyLayers(cpf_features,self.cpf_conv)
         npf_conv = self.applyLayers(npf_features,self.npf_conv)
         sv_conv = self.applyLayers(sv_features,self.sv_conv)

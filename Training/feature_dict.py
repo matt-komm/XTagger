@@ -2,6 +2,8 @@ import tensorflow as tf
 
 featureDict = {
     "truth": {
+        "firstLLPIdx":8, #needed for resampling
+        
         "names":[
             "E","MU","TAU","B","C","UDS","G","PU","LLP_Q","LLP_QE","LLP_QMU","LLP_QTAU_H","LLP_QTAU_3H"
         ],
@@ -218,16 +220,7 @@ featureDict = {
         "max":25,
         "length":"length_cpf"
     },
-    
-    "cpf_p4": {
-        "branches": [
-            'cpf_px',
-            'cpf_py',
-            'cpf_pz'
-        ],
-        "max":25,
-        "length":"length_cpf"
-    },
+
         
 
     "npf": {
@@ -254,16 +247,6 @@ featureDict = {
         "length":"length_npf"
     },
     
-    
-    "npf_p4": {
-        "branches": [
-            'npf_px',
-            'npf_py',
-            'npf_pz'
-        ],
-        "max":25,
-        "length":"length_npf"
-    },
       
 
     "sv" : {
@@ -392,15 +375,6 @@ featureDict = {
         "length":"length_mu"
     },
     
-    "muon_p4": {
-        "branches": [
-            'muon_px',
-            'muon_py',
-            'muon_pz'
-        ],
-        "max":2,
-        "length":"length_mu"
-    },
       
 
     "electron" : {
@@ -541,14 +515,5 @@ featureDict = {
         "length":"length_ele"
     },
     
-    "electron_p4": {
-        "branches": [
-            'electron_px',
-            'electron_py',
-            'electron_pz'
-        ],
-        "max":2,
-        "length":"length_ele"
-    },
 
 }
