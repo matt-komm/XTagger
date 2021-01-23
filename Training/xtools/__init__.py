@@ -19,5 +19,4 @@ from AttentionMergedNetworkSigmoid import *
 from BigOrthAttentionMergedNetwork import *
 from FeaturePlotter import *
 from PerformanceMonitor import *
-from HistPlotter import *
 import style

@@ -245,6 +245,13 @@ for epoch in range(args.resume, args.nepochs):
     learningRate = args.lr*learningRateDecay
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
     
+    modelClass.compile(
+        optClass,
+        loss=[keras.losses.categorical_crossentropy],
+        metrics=[keras.metrics.categorical_accuracy],
+        loss_weights=[1.]
+    )
+    
     modelClassTrain.compile(
         optClass,
         loss=[keras.losses.categorical_crossentropy],
@@ -253,26 +260,44 @@ for epoch in range(args.resume, args.nepochs):
     )
     
     if useDA:
-        daWeight = args.lambda0*(2./(1+math.exp(-0.1*max(0,epoch-1)))-1.)
-        optDA = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
+        daWeight = args.lambda0*(2./(1+math.exp(-0.15*max(0,epoch-1)))-1.)
+        optFull = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
+        optDomain = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
+        
+        modelFull = network.makeFullModel()
         modelFullTrain = network.makeFullModelWithSmearing()
+        
+        modelDomain = network.makeDomainModel(freezeFeatures = True)
 
+        modelFull.compile(
+            optFull,
+            loss=[keras.losses.categorical_crossentropy,keras.losses.binary_crossentropy],
+            metrics=[keras.metrics.categorical_accuracy,keras.metrics.binary_accuracy],
+            loss_weights=[1.,daWeight]
+        )
+        
         modelFullTrain.compile(
-            optDA,
+            optFull,
             loss=[keras.losses.categorical_crossentropy,keras.losses.binary_crossentropy],
             metrics=[keras.metrics.categorical_accuracy,keras.metrics.binary_accuracy],
             loss_weights=[1.,daWeight]
         )
     
-    modelClass.compile(
-        optClass,
-        loss=[keras.losses.categorical_crossentropy],
-        metrics=[keras.metrics.categorical_accuracy],
-        loss_weights=[1.]
-    )
+        modelDomain.compile(
+            optDomain,
+            loss=[keras.losses.binary_crossentropy],
+            metrics=[keras.metrics.binary_accuracy],
+            loss_weights=[1.]
+        )
+        
+    
 
     if epoch==0:
-        modelClass.summary()
+        if useDA:
+            modelFull.summary()
+        else:
+            modelClass.summary()
+        
     
     firstLLPIdx = featureDict['truth']['firstLLPIdx']
     train_batch = pipelineTrain.init(isLLPFct = lambda batch: tf.reduce_sum(batch["truth"][:, firstLLPIdx:],axis=1) > 0.5)
@@ -288,11 +313,7 @@ for epoch in range(args.resume, args.nepochs):
 
     if epoch==0:
         distributions = resampleWeights.makeDistribution()
-        
-        daHistPlotter = xtools.HistPlotter('da',bins=np.linspace(10,250,51),xaxis="Jet pT (GeV)",yaxis="#Jets")
-        daHistPlotter.makeGroup("mc",label="MC",lineColor=ROOT.kAzure-4,drawOptions="HIST")
-        daHistPlotter.makeGroup("data",label="Data",markerStyle=20,markerSize=1.3,drawOptions="PE")
-
+ 
     init_op = tf.group(
         tf.global_variables_initializer(),
         tf.local_variables_initializer()
@@ -314,6 +335,7 @@ for epoch in range(args.resume, args.nepochs):
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
     train_loss = 0
+    train_da_loss = 0
     time_train = time.time()
     try:
         step = 0
@@ -367,7 +389,7 @@ for epoch in range(args.resume, args.nepochs):
             ]
             
             if useDA:
-                train_inputs_domain = [
+                train_inputs_da = [
                     train_da_batch_value['globalvars'],
                     train_da_batch_value['cpf'],
                     train_da_batch_value['npf'],
@@ -375,18 +397,38 @@ for epoch in range(args.resume, args.nepochs):
                     train_da_batch_value['muon'],
                     train_da_batch_value['electron'],
                 ]
-                train_outputs = modelFullTrain.train_on_batch(
-                    train_inputs_class+train_inputs_domain,
-                    [train_batch_value['truth'],train_da_batch_value['truth']],
-                    sample_weight=[
-                        np.ones(train_batch_value['truth'].shape[0]),
-                        train_da_batch_value['xsecweight'][:,0],
-                    ]
-                )
-                #print train_outputs
-                train_loss+=train_outputs[0]
-                acc = train_outputs[3]
-                
+   
+                #train first steps alternating
+                if step<40:
+                    train_outputs = modelClassTrain.train_on_batch(
+                        train_inputs_class,
+                        train_batch_value['truth']
+                    )
+                    train_loss+=train_outputs[0]
+                    acc = train_outputs[1]
+                    
+                    if step>10:
+                        train_da_outputs = modelDomain.train_on_batch(
+                            [train_batch_value['gen']]+train_inputs_da,
+                            train_da_batch_value['truth']
+                        )
+                        
+                        train_da_loss += train_da_outputs[0]
+                else:
+                    train_outputs = modelFullTrain.train_on_batch(
+                        train_inputs_class+train_inputs_da,
+                        [train_batch_value['truth'],train_da_batch_value['truth']],
+                        sample_weight=[
+                            np.ones(train_batch_value['truth'].shape[0]),
+                            train_da_batch_value['xsecweight'][:,0],
+                        ]
+                    )
+                    # ['loss', 'class_softmax_loss', 'domain_final_loss', 'class_softmax_categorical_accuracy', 'class_softmax_binary_accuracy', 'domain_final_categorical_accuracy', 'domain_final_binary_accuracy']
+                    train_loss+=train_outputs[1]
+                    train_da_loss += train_outputs[2]
+                    
+                    acc = train_outputs[3]
+                    
             else:
                 train_outputs = modelClassTrain.train_on_batch(
                     train_inputs_class,
@@ -405,8 +447,11 @@ for epoch in range(args.resume, args.nepochs):
 
 
     train_loss = train_loss/step
+    train_da_loss = train_da_loss / max(1,step-10)
+    
     time_train = (time.time()-time_train)/step
-    logging.info('Done training for %i steps of epoch %i and learning rate %.4f: loss=%.3e, %.1fms/step'%(step,epoch,learningRate,train_loss,time_train*1000.))
+    
+    logging.info('Done training for %i steps of epoch %i and learning rate %.4f: loss=%.4e (%.4e), %.1fms/step'%(step,epoch,learningRate,train_loss,train_da_loss,time_train*1000.))
 
     if epoch==0:
         #featurePlotter.plot(outputFolder)
@@ -418,24 +463,36 @@ for epoch in range(args.resume, args.nepochs):
         testMonitor = xtools.PerformanceMonitor(featureDict)
 
     test_loss = 0
+    test_da_loss = 0
     time_test = time.time()
     try:
         step = 0
         while not coord.should_stop():
             step += 1
             test_batch_value = sess.run(test_batch)
+            
 
-            badValue = False
             for k,elem in test_batch_value.iteritems():
                 test_batch_value[k] = np.nan_to_num(test_batch_value[k])
                 if k=='num':
                     continue
                 if not np.isfinite(elem).all():
                     logging.error("Found non finite testing value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
-                    badValue = True
                 if np.any(elem>1e8) or np.any(elem<-1e8):
                     logging.error("Found large testing value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
-                    badValue = True
+                
+            if useDA:
+                test_da_batch_value = sess.run(test_da_batch)
+                for k,elem in test_da_batch_value.iteritems():
+                    test_da_batch_value[k] = np.nan_to_num(test_da_batch_value[k])
+                    if k=='num':
+                        continue
+                    if not np.isfinite(elem).all():
+                        logging.error("Found non finite testing value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+
+                    if np.any(elem>1e8) or np.any(elem<-1e8):
+                        logging.error("Found large testing value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+               
                 
             #print train_batch_value
             test_inputs_class = [
@@ -446,17 +503,47 @@ for epoch in range(args.resume, args.nepochs):
                 test_batch_value['sv'],
                 test_batch_value['muon'],
                 test_batch_value['electron'],
-                
             ]
             
-            test_outputs = modelClass.test_on_batch(test_inputs_class,test_batch_value['truth'])
-            test_batch_prediction = modelClass.predict_on_batch(test_inputs_class)
+            if useDA:
+                test_inputs_da = [
+                    test_da_batch_value['globalvars'],
+                    test_da_batch_value['cpf'],
+                    test_da_batch_value['npf'],
+                    test_da_batch_value['sv'],
+                    test_da_batch_value['muon'],
+                    test_da_batch_value['electron'],
+                ]
+                
+                test_outputs = modelFull.test_on_batch(
+                    test_inputs_class+test_inputs_da,
+                    [test_batch_value['truth'],test_da_batch_value['truth']],
+                    sample_weight=[
+                        np.ones(train_batch_value['truth'].shape[0]),
+                        test_da_batch_value['xsecweight'][:,0],
+                    ]
+                )
+
+                test_loss+=test_outputs[1]
+                test_da_loss+=test_outputs[2]
+                acc = test_outputs[3]
+                
+            else:
+                test_outputs = modelClass.test_on_batch(test_inputs_class,test_batch_value['truth'])
+                
+                test_loss+=test_outputs[0]
+                acc = test_outputs[1]
             
             if epoch%5==0:
-                testMonitor.analyze_batch(test_batch_value,test_batch_prediction)
+                test_class_prediction = modelClass.predict_on_batch(test_inputs_class)
+                testMonitor.analyze_batch(test_batch_value,test_class_prediction)
                 
-            test_loss+=test_outputs[0]
-            acc = test_outputs[1]
+                if useDA:
+                    da_class_prediction = modelClass.predict_on_batch([test_batch_value['gen']]+test_inputs_da)
+                    _,da_domain_prediction = modelFull.predict_on_batch(test_inputs_class+test_inputs_da)
+                    
+                    testMonitor.analyze_batch_da(test_da_batch_value,da_class_prediction,da_domain_prediction,test_batch_value['gen'])
+                    
             if step%10==0:
                 logging.info("Testing step %i-%i: loss=%.4f, accuracy=%.2f%%"%(epoch,step,test_outputs[0],100.*acc))
 
@@ -465,23 +552,28 @@ for epoch in range(args.resume, args.nepochs):
         pass
         
     test_loss = test_loss/step
+    test_da_loss = test_da_loss/step
     time_test = (time.time()-time_test)/step
-    logging.info('Done testing for %i steps of epoch %i: loss=%.4f, %.1fms/step'%(step,epoch,test_loss,time_test*1000.))
+    
+    logging.info('Done testing for %i steps of epoch %i: loss=%.4e (%.4e), %.1fms/step'%(step,epoch,test_loss,test_da_loss,time_test*1000.))
 
     logging.info("Epoch duration: %.1fmin"%((time.time() - start_time_epoch)/60.))
 
-        
+
     if epoch%5==0:
         #testMonitor.save(os.path.join(outputFolder,'test_%i.hdf5'%(epoch)))
         testMonitor.plot(featureDict['truth']['names'],os.path.join(outputFolder,'test_%i'%(epoch)))
+        if useDA:
+            testMonitor.plotDA(featureDict['truth']['names'],os.path.join(outputFolder,'da_%i'%(epoch)))
             
-    
     f = open(os.path.join(outputFolder, "model_epoch.stat"), "a")
-    f.write("%i;%.3e;%.3e;%.3e\n"%(
+    f.write("%i;%.3e;%.3e;%.3e;%.3e;%.3e\n"%(
         epoch,
         learningRate,
         train_loss,
         test_loss,
+        train_da_loss,
+        test_da_loss
     ))
     f.close()
 

@@ -246,7 +246,7 @@ class NominalNetwork():
 
         #### Class prediction ####
         self.class_prediction = []
-        for i,nodes in enumerate([100,100]):
+        for i,nodes in enumerate([100,100,100]):
             self.class_prediction.extend([
                 keras.layers.Dense(
                     nodes,
@@ -379,8 +379,13 @@ class NominalNetwork():
         class_prediction = self.applyLayers(full_features,self.class_prediction)
         return class_prediction
         
-    def predictDomain(self,globalvars,cpf,npf,sv,muon,electron,gen):
+    def predictDomain(self,globalvars,cpf,npf,sv,muon,electron,gen,freezeFeatures=False):
         full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen)
+        
+        # stopping gradients prevents updating of weights in previous layers
+        if freezeFeatures:
+            full_features = keras.layers.Lambda(lambda x: tf.stop_gradient(x)+0.*x,name='stop_gradient')(full_features)
+            
         domain_prediction = self.applyLayers(full_features,self.domain_prediction)
         return domain_prediction
 
@@ -408,6 +413,35 @@ class NominalNetwork():
                 predictedClass
             ]
         )
+        return model
+        
+    def makeDomainModel(self, freezeFeatures = False):        
+        predictedDomain = self.predictDomain(
+            self.input_da_globalvars,
+            self.input_da_cpf,
+            self.input_da_npf,
+            self.input_da_sv,
+            self.input_da_muon,
+            self.input_da_electron,
+            self.input_gen,
+            freezeFeatures = freezeFeatures
+        )
+        
+        model = keras.models.Model(
+            inputs=[
+                self.input_gen,
+                self.input_da_globalvars,
+                self.input_da_cpf,
+                self.input_da_npf,
+                self.input_da_sv,
+                self.input_da_muon,
+                self.input_da_electron,
+            ],
+            outputs=[
+                predictedDomain
+            ]
+        )
+        
         return model
     
     def makeClassModelWithSmearing(self):
@@ -448,6 +482,52 @@ class NominalNetwork():
             ]
         )
         model.add_loss(tf.reduce_mean(tf.square(predictedClass-predictedClassAlt)))
+        return model
+        
+    def makeFullModel(self):
+        predictedClass = self.predictClass(
+            self.input_globalvars,
+            self.input_cpf,
+            self.input_npf,
+            self.input_sv,
+            self.input_muon,
+            self.input_electron,
+            self.input_gen,
+        )
+        
+        predictedDomain = self.predictDomain(
+            self.input_da_globalvars,
+            self.input_da_cpf,
+            self.input_da_npf,
+            self.input_da_sv,
+            self.input_da_muon,
+            self.input_da_electron,
+            self.input_gen,
+        )
+        
+        model = keras.models.Model(
+            inputs=[
+                self.input_gen,
+                self.input_globalvars,
+                self.input_cpf,
+                self.input_npf,
+                self.input_sv,
+                self.input_muon,
+                self.input_electron,
+                
+                self.input_da_globalvars,
+                self.input_da_cpf,
+                self.input_da_npf,
+                self.input_da_sv,
+                self.input_da_muon,
+                self.input_da_electron,
+            ],
+            outputs=[
+                predictedClass,
+                predictedDomain
+            ]
+        )
+        
         return model
         
     def makeFullModelWithSmearing(self):
@@ -508,6 +588,9 @@ class NominalNetwork():
         )
         model.add_loss(tf.reduce_mean(tf.square(predictedClass-predictedClassAlt)))
         return model
+        
+        
+        
         
         
 
