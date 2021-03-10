@@ -12,13 +12,17 @@ class Weights():
         self,
         labelNameList,
         weightHistsPerLabel,
+        weightParamHistsPerLabel,
         ptBinning,
-        etaBinning
+        etaBinning,
+        paramBinning
     ):
         self.labelNameList = labelNameList
         self.weightHistsPerLabel = weightHistsPerLabel
+        self.weightParamHistsPerLabel = weightParamHistsPerLabel
         self.ptBinning = ptBinning
         self.etaBinning = etaBinning
+        self.paramBinning = paramBinning
         
     def plot(self,path):
         cv = ROOT.TCanvas("cv"+str(random.random()),"",800,900)
@@ -80,10 +84,47 @@ class Weights():
             
         cv.Print(path)
         
+        
+    def plotParam(self,path):
+        cv = ROOT.TCanvas("cv"+str(random.random()),"",800,900)
+        cv.SetMargin(0.13,0.25,0.17,0.05)
+        
+        color=[
+            ROOT.kGreen,ROOT.kGreen+1,ROOT.kGreen+2,
+            ROOT.kAzure-4,ROOT.kOrange+7,ROOT.kRed,ROOT.kRed+1,
+            ROOT.kGray,
+            ROOT.kBlack,
+            ROOT.kYellow,ROOT.kYellow+1,ROOT.kYellow+2,
+            ROOT.kOrange+1,ROOT.kOrange+2,ROOT.kOrange+2
+        ]
+
+            
+        axisParam = ROOT.TH2F("axisParam"+str(random.random()),";Jet log#lower[0.3]{#scale[0.7]{10}}(L#lower[0.3]{#scale[0.7]{xy}} / 1 cm);Weight",
+            len(self.paramBinning)-1,self.paramBinning,
+            50,np.linspace(0,1.1*max(0.1,max(map(lambda x: x['weight'].GetMaximum(),self.weightParamHistsPerLabel.values()))),51)
+        )
+        axisParam.Draw("AXIS")
+        
+        for i,k in enumerate(self.labelNameList):
+            self.weightParamHistsPerLabel[k]['weight'].SetLineColor(color[i])
+            self.weightParamHistsPerLabel[k]['weight'].SetLineWidth(2)
+            self.weightParamHistsPerLabel[k]['weight'].Draw("SameHIST")
+            
+       
+        cv.Print(path)
+        
     def save(self,path):
         outputFile = ROOT.TFile(path,"RECREATE")
         for k in self.labelNameList:
             hist = self.weightHistsPerLabel[k]['weight'].Clone(k)
+            hist.SetDirectory(outputFile)
+            hist.Write()
+        outputFile.Close()
+        
+    def saveParam(self,path):
+        outputFile = ROOT.TFile(path,"RECREATE")
+        for k in self.labelNameList:
+            hist = self.weightParamHistsPerLabel[k]['weight'].Clone(k)
             hist.SetDirectory(outputFile)
             hist.Write()
         outputFile.Close()
@@ -232,6 +273,7 @@ class ResampleWeights():
             self.paramHists[self.labelNameList[ilabel]] = histParam
             
         self.histTarget = self.projectHistPtEta(chain,'target',self.targetWeight)
+        self.histParamTarget = self.projectHistParam(chain,"targetParam",self.targetWeight)
         self.totalIntegral = sum(map(lambda x: x.Integral(),self.histPerLabel.values()))
         if self.totalIntegral<100:
             logging.critical("Total number of jets too small:"+str(self.totalIntegral))
@@ -248,12 +290,16 @@ class ResampleWeights():
         )
         logging.info(msg)
         
-    def reweight(self,classBalance=True,threshold=10,oversampling=2.):
+    def reweight(self,classBalance=True,threshold=100,oversampling=2.):
         weightHistsPerLabel = {}
+        weightParamHistsPerLabel = {}
         maxWeightPerLabel = {}
+        maxParamWeightPerLabel = {}
         for k in self.histPerLabel.keys():
             weightHistsPerLabel[k] = {}
+            weightParamHistsPerLabel[k] = {}
             maxWeightPerLabel[k] = 0
+            maxParamWeightPerLabel[k] = 0
             
         for ibin in range(self.histTarget.GetNbinsX()):
             for jbin in range(self.histTarget.GetNbinsY()):
@@ -301,11 +347,58 @@ class ResampleWeights():
                         weightHist.SetBinContent(ibin+1,jbin+1,0)
                         numeratorHist.SetBinContent(ibin+1,jbin+1,0)
                         denominatorHist.SetBinContent(ibin+1,jbin+1,0)
-                    
+    
             weightHistsPerLabel[k]['weight'] = weightHist
             weightHistsPerLabel[k]['numerator'] = numeratorHist
             weightHistsPerLabel[k]['denominator'] = denominatorHist
-        return Weights(self.labelNameList, weightHistsPerLabel,self.ptBinning,self.etaBinning)
+            
+        for k in self.paramHists.keys():
+            weightParamHist = ROOT.TH1F(
+                k+"weightParam"+str(random.random()),"",
+                len(self.paramBinning)-1, self.paramBinning
+            )
+            weightParamHist.SetDirectory(0)
+            
+            numeratorParamHist = ROOT.TH1F(
+                k+"numeratorParam"+str(random.random()),"",
+                len(self.paramBinning)-1, self.paramBinning
+            )
+            numeratorParamHist.SetDirectory(0)
+            
+            denominatorParamHist = ROOT.TH1F(
+                k+"denominatorParam"+str(random.random()),"",
+                len(self.paramBinning)-1, self.paramBinning
+            )
+            denominatorParamHist.SetDirectory(0)
+            
+            #rate of <0 will cause pass through; important for nonLLP classes; NB: set over/underflow!
+            if k.find("LLP")<0:
+                for ibin in range(self.histParamTarget.GetNbinsX()+2):
+                    weightParamHist.SetBinContent(ibin,-1)
+            else:
+                for ibin in range(self.histParamTarget.GetNbinsX()):
+                    nTarget = self.histParamTarget.GetBinContent(ibin+1)
+                    nLabel = self.paramHists[k].GetBinContent(ibin+1)
+                    if nTarget>threshold and nLabel>threshold:
+                        weightParamHist.SetBinContent(ibin+1,nTarget/nLabel)
+                        numeratorParamHist.SetBinContent(ibin+1,nTarget)
+                        denominatorParamHist.SetBinContent(ibin+1,nLabel)
+                    else:
+                        weightParamHist.SetBinContent(ibin+1,0)
+                        numeratorParamHist.SetBinContent(ibin+1,0)
+                        denominatorParamHist.SetBinContent(ibin+1,0)
+                
+                #only change shape but not total event count; this is done in the pt/eta resampling
+                scale = weightParamHist.GetNbinsX()/weightParamHist.Integral()
+                #print k,scale
+                weightParamHist.Scale(scale)
+                numeratorParamHist.Scale(scale)
+                    
+            weightParamHistsPerLabel[k]['weight'] = weightParamHist
+            weightParamHistsPerLabel[k]['numerator'] = numeratorParamHist
+            weightParamHistsPerLabel[k]['denominator'] = denominatorParamHist
+            
+        return Weights(self.labelNameList, weightHistsPerLabel, weightParamHistsPerLabel, self.ptBinning, self.etaBinning, self.paramBinning)
         
     def projectHistPtEta(self,chain,histName,labelWeight):
         hist = ROOT.TH2F(

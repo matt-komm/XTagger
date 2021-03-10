@@ -3,8 +3,9 @@ import os
 import ROOT
 
 class InputFiles():
-    def __init__(self, maxFiles=-1):
+    def __init__(self, maxFiles=-1,percentage=1.0):
         self.maxFiles = maxFiles
+        self.percentage = percentage
         self.fileList = []
         
     
@@ -29,10 +30,10 @@ class InputFiles():
             logging.warning("file '"+path+"' does not exists -> skip!")
         
     def nFiles(self):
-        if self.maxFiles>0:
-            return min(self.maxFiles,len(self.fileList))
-        else:
-            return len(self.fileList)
+        return min(
+            int(round(self.percentage*len(self.fileList))),
+            self.maxFiles if self.maxFiles>0 else len(self.fileList)
+        )
             
     def nJets(self):
         chain = ROOT.TChain("jets")

@@ -249,8 +249,8 @@ class PerformanceMonitor():
             data = np.concatenate([data1, data2])
             cwei1 = np.hstack([0, np.cumsum(wei1)/sum(wei1)])
             cwei2 = np.hstack([0, np.cumsum(wei2)/sum(wei2)])
-            cdf1we = cwei1[[np.searchsorted(data1, data, side='right')]]
-            cdf2we = cwei2[[np.searchsorted(data2, data, side='right')]]
+            cdf1we = cwei1[np.searchsorted(data1, data, side='right')]
+            cdf2we = cwei2[np.searchsorted(data2, data, side='right')]
             
             ks = np.max(np.abs(cdf1we - cdf2we))
             #p = 2*np.exp(-ks**2*(2*len(data1)/(1+len(data1)/len(data2))))
@@ -263,7 +263,7 @@ class PerformanceMonitor():
                 chi2_values[i] = np.mean(np.square(mcBinsSmeared[dataBins>0]-dataBins[dataBins>0])/(dataBins[dataBins>0]))
             return np.mean(chi2_values),np.std(chi2_values)
             
-        gen_bins = np.linspace(-2,3,6)
+        gen_bins = np.linspace(-2,2,5)
         gen_values = 0.5*(gen_bins[:-1]+gen_bins[1:])
         ngen = len(gen_values)
         
@@ -283,30 +283,79 @@ class PerformanceMonitor():
                 
                 mcWeight = self.xsecweight_da[selectMC]
                 
-                ks= ks_w2(mcScore,dataScore,mcWeight,np.ones(dataScore.shape[0]))
-                
+                if dataScore.shape[0]>0 and mcScore.shape[0]>0:
+                    ks= ks_w2(mcScore,dataScore,mcWeight,np.ones(dataScore.shape[0]))
+                else:
+                    ks = 0
+                    
                 plt.subplot(
                     ngen,len(classNames), index, 
                     ylabel='Normalized events', 
                     xlabel=className+' discriminant [%.0f < $\\log_{10}(L_{xy} / 1\\mathrm{mm}$) < %.0f]'%(gen_bins[igen],gen_bins[igen+1])
                 )
-                              
                 binsMC,_,_ = plt.hist(mcScore, bins=np.linspace(0,1,21), weights=mcWeight, linewidth=2, histtype='step',  density=True, color='darkorange',label='MC')
                 binsData,_,_ = plt.hist(dataScore, bins=np.linspace(0,1,21), linewidth=2, histtype='step',linestyle='--',  density=True, color='blue',label='Data')
                 
-                chi2_value,chi2_std = chi2(binsMC,binsData)
+                #chi2_value,chi2_std = chi2(binsMC,binsData)
                 
                 plt.plot([], [], ' ', label="KS = %.3f"%(ks))
-                plt.plot([], [], ' ', label="$\\chi^{2}$/ndof = %.2f$\\pm$%.2f"%(chi2_value,chi2_std))
+                #plt.plot([], [], ' ', label="$\\chi^{2}$/ndof = %.2f$\\pm$%.2f"%(chi2_value,chi2_std))
                 plt.xlim([0.0, 1.0])
                 plt.yscale('log')
 
                 plt.grid(b=True,which='both',axis='both',linestyle='--')
                 plt.legend(loc="upper center")
         plt.tight_layout()
-        plt.savefig(path+"_discriminant.pdf",format='pdf')
+        plt.savefig(path+"_discriminant_bins.pdf",format='pdf')
         plt.close()
                 
+                
+        plt.figure(figsize=[4.4*len(classNames),3.7*ngen],dpi=120)
+        index = 0
+        
+        for igen, gen in enumerate(range(ngen)):
+            for iclass, className in enumerate(classNames):
+                index+=1
+
+                selectGen = (self.gen_da>gen_bins[igen])*(self.gen_da<gen_bins[igen+1])
+                selectMC = (self.truth_domain_da<0.5)*selectGen
+                selectData = (self.truth_domain_da>0.5)*selectGen
+                
+                mcScore = self.scores_class_da[selectMC][:,iclass]
+                dataScore = self.scores_class_da[selectData][:,iclass]
+ 
+                mcWeight = self.xsecweight_da[selectMC]
+                
+                ks= ks_w2(mcScore,dataScore,mcWeight,np.ones(dataScore.shape[0]))
+                
+                plt.subplot(
+                    ngen,len(classNames), index, 
+                    ylabel='Normalized events', 
+                    xlabel=className+' percentiles [%.0f < $\\log_{10}(L_{xy} / 1\\mathrm{mm}$) < %.0f]'%(gen_bins[igen],gen_bins[igen+1])
+                )
+                #use data here since unweighted
+                binning = np.percentile(dataScore,np.linspace(0,100,21))
+                #capture potential under/overflow
+                binning[0] = 0.
+                binning[-1] = 1.
+                binsMC,_ = np.histogram(mcScore, bins=binning,weights=mcWeight,density=True)
+                binsData,_ = np.histogram(dataScore, bins=binning,density=True)
+                
+                plt.plot(np.linspace(0,100,20), binsMC, linewidth=2,color='darkorange',label='MC')
+                plt.plot(np.linspace(0,100,20), binsData, linewidth=2, linestyle='--', color='blue',label='Data')
+                
+                #chi2_value,chi2_std = chi2(binsMC,binsData)
+                
+                plt.plot([], [], ' ', label="KS = %.3f"%(ks))
+                #plt.plot([], [], ' ', label="$\\chi^{2}$/ndof = %.2f$\\pm$%.2f"%(chi2_value,chi2_std))
+                plt.xlim([0.0, 100.0])
+                #plt.yscale('log')
+
+                plt.grid(b=True,which='both',axis='both',linestyle='--')
+                plt.legend(loc="upper center")
+        plt.tight_layout()
+        plt.savefig(path+"_discriminant_percentiles.pdf",format='pdf')
+        plt.close()
                 
         '''
         

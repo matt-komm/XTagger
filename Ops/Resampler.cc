@@ -82,9 +82,16 @@ class ResamplerOp:
             unsigned int sum_rates = 0;
             for (unsigned int i = 0; i < rates.size(); ++i)
             {
-                diced_rates[i]=std::poisson_distribution<unsigned int>(rates(i))(
-                    *generator_
-                );
+                if (rates(i)<0.0f)
+                {
+                     diced_rates[i]=1; //pass through
+                }
+                else
+                {
+                    diced_rates[i]=std::poisson_distribution<unsigned int>(rates(i))(
+                        *generator_
+                    );
+                }
                 sum_rates+=diced_rates[i];
             }
             for (int input_index = 1; input_index < context->num_inputs(); ++input_index)

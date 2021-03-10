@@ -36,6 +36,8 @@ parser.add_argument('--perf', dest="perfList", default=[], action='append', help
 parser.add_argument('-o', '--output', help='job name', dest='outputFolder', required=True)
 parser.add_argument('-n', action='store', type=int, dest='maxFiles',
                     help='number of files to be processed')
+parser.add_argument('--reduceTrainingStats', type=float, dest='reduceTrainingStats', default=1.0,
+                    help='reduce training stats')
 parser.add_argument('--gpu', action='store_true', dest='forceGPU',
                     help='try to use gpu', default=False)
 parser.add_argument('-b', '--batch', action='store', type=int,
@@ -50,6 +52,8 @@ parser.add_argument('-f', '--force', action='store_true',
 parser.add_argument('-p', '--parametric', action='store_true',
                     dest='parametric',
                     help='train a parametric model', default=False)
+parser.add_argument('--wasserstein', action='store_true',dest='wasserstein',
+                    help='use wasserstein loss for DA', default=False)
 parser.add_argument('--noda', action='store_true',
                     dest='noda',
                     help='deactivate DA', default=False)
@@ -97,21 +101,22 @@ if args.forceGPU and devices.nGPU==0:
 logging.info("Output folder: %s"%args.outputFolder)
 logging.info("Epochs: %i"%args.nepochs)
 logging.info("Batch size: %i"%args.batchSize)
+logging.info("Training stats: %.1f%%"%(100.*args.reduceTrainingStats))
 logging.info("Random seed: %i"%args.seed)
 logging.info("Learning rate: %.3e"%args.lr)
 logging.info("Learning rate decay: %.3e"%args.kappa)
 
+
 useDA = len(args.trainFilesDA)>0 and len(args.testFilesDA)>0
-logging.info("Use DA: "+"True" if useDA else "False")
+logging.info("Use DA: "+("True" if useDA else "False"))
+logging.info("Use Wasserstein loss for DA: "+("True" if args.wasserstein else "False"))
 logging.info("Lambda0: %.1f"%(args.lambda0))
 
 random.seed(args.seed)
 np.random.seed(args.seed)
 tf.set_random_seed(args.seed)
 
-#TODO: make maxFiles a percentage
-
-trainInputs = xtools.InputFiles(maxFiles=args.maxFiles)
+trainInputs = xtools.InputFiles(maxFiles=args.maxFiles,percentage=args.reduceTrainingStats)
 for f in args.trainFiles:
     trainInputs.addFileList(f)
 testInputs = xtools.InputFiles(maxFiles=args.maxFiles)
@@ -152,13 +157,15 @@ resampleWeights = xtools.ResampleWeights(
             +'||jetorigin_isLLP_TAU||jetorigin_isLLP_QTAU||jetorigin_isLLP_QQTAU',
     ptBinning=np.concatenate([[10.],np.logspace(1.2,2.1,22)]),#np.array([10., 12.5, 15., 17.5, 20., 22.5, 25.,27.5 30.,3 35., 40., 50., 60., 70., 80., 100., 120.]),
     etaBinning=np.linspace(-2.4,2.4,6),
-    paramBinning=np.linspace(-3,3,10)
+    paramBinning=np.linspace(-2,2,41)
 )
 
 resampleWeights.plot(outputFolder)
 weights = resampleWeights.reweight(classBalance=True,oversampling=2)
 weights.plot(os.path.join(outputFolder,"weights.pdf"))
+weights.plotParam(os.path.join(outputFolder,"weights_param.pdf"))
 weights.save(os.path.join(outputFolder,"weights.root"))
+weights.saveParam(os.path.join(outputFolder,"weights_param.root"))
 
 
 pipelineTrain = xtools.Pipeline(
@@ -167,7 +174,9 @@ pipelineTrain = xtools.Pipeline(
     batchSize=args.batchSize,
     resample=True,
     weightFile=os.path.join(outputFolder,"weights.root"),
+    weightParamFile=os.path.join(outputFolder,"weights_param.root"),
     labelNameList=resampleWeights.getLabelNameList(),
+    maxThreads=4
 )
 
 pipelineTest = xtools.Pipeline(
@@ -176,7 +185,9 @@ pipelineTest = xtools.Pipeline(
     batchSize=args.batchSize,
     resample=True,
     weightFile=os.path.join(outputFolder,"weights.root"),
+    weightParamFile=os.path.join(outputFolder,"weights_param.root"),
     labelNameList=resampleWeights.getLabelNameList(),
+    maxThreads=4
 )
 
 if useDA:
@@ -201,6 +212,7 @@ if useDA:
         featureDictDA,
         batchSize=args.batchSize,
         repeat=None, #unlimited
+        maxThreads=4
     )
 
     pipelineTestDA = xtools.Pipeline(
@@ -208,6 +220,7 @@ if useDA:
         featureDictDA,
         batchSize=args.batchSize,
         repeat=None, #unlimited
+        maxThreads=4
     )
 
 perfPipelines = []
@@ -235,14 +248,16 @@ for epoch in range(args.resume, args.nepochs):
 
     Network = imp.load_source('Network', os.path.join(args.outputFolder,"Network.py")).network
 
-    network = Network(featureDict)
+    network = Network(featureDict,wasserstein=args.wasserstein)
     modelClassTrain = network.makeClassModelWithSmearing()
     modelClass = network.makeClassModel()
     
     lrDecayDelay = 10
 
     learningRateDecay = 1./(1.+args.kappa*max(0,epoch-lrDecayDelay)**1.5)
+    
     learningRate = args.lr*learningRateDecay
+    
     optClass = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
     
     modelClass.compile(
@@ -262,35 +277,51 @@ for epoch in range(args.resume, args.nepochs):
     if useDA:
         daWeight = args.lambda0*(2./(1+math.exp(-0.15*max(0,epoch-1)))-1.)
         optFull = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
-        optDomain = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999)
+        
+        def wasserstein_loss(ytrue,ypred):
+            return tf.reduce_mean((2.*ytrue-1.) * ypred)
         
         modelFull = network.makeFullModel()
         modelFullTrain = network.makeFullModelWithSmearing()
         
-        modelDomain = network.makeDomainModel(freezeFeatures = True)
+        modelDomain = network.makeDomainModel()
 
         modelFull.compile(
             optFull,
-            loss=[keras.losses.categorical_crossentropy,keras.losses.binary_crossentropy],
+            loss=[
+                keras.losses.categorical_crossentropy,
+                keras.losses.binary_crossentropy if not args.wasserstein else wasserstein_loss,
+            ],
             metrics=[keras.metrics.categorical_accuracy,keras.metrics.binary_accuracy],
             loss_weights=[1.,daWeight]
         )
         
         modelFullTrain.compile(
             optFull,
-            loss=[keras.losses.categorical_crossentropy,keras.losses.binary_crossentropy],
+            loss=[
+                keras.losses.categorical_crossentropy,
+                keras.losses.binary_crossentropy if not args.wasserstein else wasserstein_loss,
+            ],
             metrics=[keras.metrics.categorical_accuracy,keras.metrics.binary_accuracy],
             loss_weights=[1.,daWeight]
         )
     
+        for l in modelDomain.layers:
+            if l.name.find('domain')<0:
+                l.trainable=False
+                
+        #use fixed lr when training DA branch only
+        optDomain = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999)
+        
+        #compile last to use keras bug during layer freezing
         modelDomain.compile(
             optDomain,
-            loss=[keras.losses.binary_crossentropy],
+            loss=[
+                keras.losses.binary_crossentropy  if not args.wasserstein else wasserstein_loss,
+            ],
             metrics=[keras.metrics.binary_accuracy],
             loss_weights=[1.]
         )
-        
-    
 
     if epoch==0:
         if useDA:
@@ -324,7 +355,11 @@ for epoch in range(args.resume, args.nepochs):
 
     if epoch>0:
         networkWeightFile = os.path.join(outputFolder,'weight_%i.hdf5'%(epoch-1))
+        networkDAWeightFile = os.path.join(outputFolder,'weight_da_%i.hdf5'%(epoch-1))
         if os.path.exists(networkWeightFile):
+            if useDA and os.path.exists(networkDAWeightFile):
+                logging.info("loading DA weights from "+networkDAWeightFile)
+                modelDomain.load_weights(networkDAWeightFile)
             logging.info("loading weights from "+networkWeightFile)
             modelClass.load_weights(networkWeightFile)
         else:
@@ -352,17 +387,7 @@ for epoch in range(args.resume, args.nepochs):
                 if np.any(elem>1e8) or np.any(elem<-1e8):
                     logging.error("Found large training value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
                 
-            if useDA:
-                train_da_batch_value = sess.run(train_da_batch)
-                for k,elem in train_da_batch_value.iteritems():
-                    train_da_batch_value[k] = np.nan_to_num(train_da_batch_value[k])
-                    if k=='num':
-                        continue
-                    if not np.isfinite(elem).all():
-                        logging.error("Found non finite training da value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
-                    if np.any(elem>1e8) or np.any(elem<-1e8):
-                        logging.error("Found large training da value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
-                    
+            #print train_batch_value['lxyweight'][0:100]
 
             if epoch==0:
                 #featurePlotter.fill(train_batch_value)
@@ -375,11 +400,11 @@ for epoch in range(args.resume, args.nepochs):
                 )
                 
             
-            smearBkgGen = np.expand_dims((np.sum(train_batch_value['truth'][:,:firstLLPIdx],axis=1)>0.5)*np.random.normal(0.,1.,size=train_batch_value['truth'].shape[0]),axis=1)
+            smearBkgGen = np.expand_dims((np.sum(train_batch_value['truth'][:,:firstLLPIdx],axis=1)>0.5)*np.random.normal(0.,0.5,size=train_batch_value['truth'].shape[0]),axis=1)
 
             train_inputs_class = [
                 train_batch_value['gen'],
-                train_batch_value['gen']+smearBkgGen,
+                np.clip(train_batch_value['gen']+smearBkgGen,-2.5,3.5),
                 train_batch_value['globalvars'],
                 train_batch_value['cpf'],
                 train_batch_value['npf'],
@@ -389,32 +414,63 @@ for epoch in range(args.resume, args.nepochs):
             ]
             
             if useDA:
-                train_inputs_da = [
-                    train_da_batch_value['globalvars'],
-                    train_da_batch_value['cpf'],
-                    train_da_batch_value['npf'],
-                    train_da_batch_value['sv'],
-                    train_da_batch_value['muon'],
-                    train_da_batch_value['electron'],
-                ]
-   
-                #train first steps alternating
-                if step<40:
+                #train class only
+                if epoch==0:
                     train_outputs = modelClassTrain.train_on_batch(
                         train_inputs_class,
                         train_batch_value['truth']
                     )
                     train_loss+=train_outputs[0]
                     acc = train_outputs[1]
-                    
-                    if step>10:
+                else:
+                
+                    #train 4x on domain only
+                    for _ in range(4):
+                        train_da_batch_value = sess.run(train_da_batch)
+                        for k,elem in train_da_batch_value.iteritems():
+                            train_da_batch_value[k] = np.nan_to_num(train_da_batch_value[k])
+                            if k=='num':
+                                continue
+                            if not np.isfinite(elem).all():
+                                logging.error("Found non finite training da value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+                            if np.any(elem>1e8) or np.any(elem<-1e8):
+                                logging.error("Found large training da value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                        
+                        train_inputs_da = [
+                            train_da_batch_value['globalvars'],
+                            train_da_batch_value['cpf'],
+                            train_da_batch_value['npf'],
+                            train_da_batch_value['sv'],
+                            train_da_batch_value['muon'],
+                            train_da_batch_value['electron'],
+                        ]
+
                         train_da_outputs = modelDomain.train_on_batch(
                             [train_batch_value['gen']]+train_inputs_da,
-                            train_da_batch_value['truth']
+                            train_da_batch_value['truth'],
+                            sample_weight=[train_da_batch_value['xsecweight'][:,0]]
                         )
-                        
-                        train_da_loss += train_da_outputs[0]
-                else:
+
+                    #train both
+                    train_da_batch_value = sess.run(train_da_batch)
+                    for k,elem in train_da_batch_value.iteritems():
+                        train_da_batch_value[k] = np.nan_to_num(train_da_batch_value[k])
+                        if k=='num':
+                            continue
+                        if not np.isfinite(elem).all():
+                            logging.error("Found non finite training da value in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.isfinite(elem).nonzero()))
+                        if np.any(elem>1e8) or np.any(elem<-1e8):
+                            logging.error("Found large training da value (>1e8 or <-1e8) in "+k+" ("+str(elem.shape)+")\nindices:"+str(np.nonzero(np.logical_or(elem>1e8,elem<-1e8))))
+                    
+                    train_inputs_da = [
+                        train_da_batch_value['globalvars'],
+                        train_da_batch_value['cpf'],
+                        train_da_batch_value['npf'],
+                        train_da_batch_value['sv'],
+                        train_da_batch_value['muon'],
+                        train_da_batch_value['electron'],
+                    ]
+                    
                     train_outputs = modelFullTrain.train_on_batch(
                         train_inputs_class+train_inputs_da,
                         [train_batch_value['truth'],train_da_batch_value['truth']],
@@ -457,7 +513,7 @@ for epoch in range(args.resume, args.nepochs):
         #featurePlotter.plot(outputFolder)
         distributions.plot(os.path.join(outputFolder,"resampled.pdf"))
     modelClass.save_weights(os.path.join(outputFolder,'weight_%i.hdf5'%epoch))
-
+    modelDomain.save_weights(os.path.join(outputFolder,'weight_da_%i.hdf5'%(epoch)))
 
     if epoch%5==0:
         testMonitor = xtools.PerformanceMonitor(featureDict)

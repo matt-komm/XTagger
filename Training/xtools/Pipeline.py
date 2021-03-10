@@ -11,6 +11,7 @@ class Pipeline():
         batchSize=1000,
         resample=False,
         weightFile=None,
+        weightParamFile=None,
         labelNameList=None,
         repeat=1,
         bagging=1.,
@@ -20,6 +21,7 @@ class Pipeline():
         self.features = features
         self.labelNameList = labelNameList
         self.weightFile = weightFile
+        self.weightParamFile = weightParamFile
         self.batchSize = batchSize
         self.resample = resample
         self.repeat = repeat
@@ -52,19 +54,36 @@ class Pipeline():
                 reader = xtagger.root_reader(fileListQueue, self.features, "jets", batch=reader_batch).batch()
                 rootreader_op.append(reader)
                 if self.resample:
+                    result = reader
+                    if self.weightParamFile!=None:
+                        lxyweight = xtagger.lxy_weights(
+                            result["truth"],
+                            result["gen"],
+                            self.weightParamFile,
+                            self.labelNameList,
+                            [0]
+                        )
+                        result['lxyweight'] = lxyweight
+                        result = xtagger.resampler(
+                            lxyweight,
+                            result
+                        ).resample()
+                    
                     weight = xtagger.classification_weights(
-                        reader["truth"],
-                        reader["globalvars"],
+                        result["truth"],
+                        result["globalvars"],
                         self.weightFile,
                         self.labelNameList,
                         [0, 1]
                     )
-                    resampled = xtagger.resampler(
+                    result = xtagger.resampler(
                         weight,
-                        reader
+                        result
                     ).resample()
+                    
+                    
 
-                    resamplers.append(resampled)
+                    resamplers.append(result)
 
             minAfterDequeue = self.batchSize * 2
             capacity = minAfterDequeue + 3*self.batchSize
@@ -77,7 +96,7 @@ class Pipeline():
             )
             if self.resample:
                 isSignal = isLLPFct(batch)
-                batch["gen"] = xtagger.fake_background(batch["gen"], isSignal, feature_index=0, rstart=-1, rend=3)
+                batch["gen"] = xtagger.fake_background(batch["gen"], isSignal, feature_index=0, rstart=-2.5, rend=3.5)
 
             return batch
 

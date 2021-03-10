@@ -57,6 +57,14 @@ add_library(ClassificationWeights
 target_link_libraries(ClassificationWeights ${TensorFlow_LIBRARY} ${ROOT_LIBRARIES})
 install(TARGETS ClassificationWeights LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/xtagger")
 
+
+add_library(LxyWeights
+    MODULE
+    LxyWeights.cc
+)
+target_link_libraries(LxyWeights ${TensorFlow_LIBRARY} ${ROOT_LIBRARIES})
+install(TARGETS LxyWeights LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/xtagger")
+
 add_library(FakeBackground
     MODULE
     FakeBackground.cc
@@ -78,6 +86,7 @@ set(pythonfiles
     resampler.py
     fake_background.py
     classification_weights.py
+    lxy_weights.py
 )
 
 foreach(pyfile ${pythonfiles})

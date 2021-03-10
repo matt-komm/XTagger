@@ -3,11 +3,11 @@ import sys
 import re
 import shutil
 
-inputPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/inputs_201117/2018"
+inputPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/inputs_201117/2016"
 
 
 #outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_signal/2016"
-outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_mixed/2018"
+outputTrainPath = "/vols/cms/mkomm/HNL/XTagger/Unpacker/training_201117_mixed/2016"
 
 configs = [
     {

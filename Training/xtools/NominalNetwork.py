@@ -5,12 +5,30 @@ import os
 import sys
 import logging
 
+	
+# clip model weights to a given hypercube
+class ClipConstraint(keras.constraints.Constraint):
+	# set clip value when initialized
+	def __init__(self, clip_value):
+		self.clip_value = clip_value
+ 
+	# clip model weights to hypercube
+	def __call__(self, weights):
+		return K.clip(weights, -self.clip_value, self.clip_value)
+ 
+	# get the config
+	def get_config(self):
+		return {'clip_value': self.clip_value}
+
 class NominalNetwork():
-    def __init__(self,featureDict,lrp=False):
+    def __init__(self,featureDict,lrp=False,wasserstein=False):
         self.featureDict = featureDict
+        self.wasserstein = wasserstein
         self.nclasses = len(self.featureDict["truth"]["branches"])
         self.lrp = lrp
         #### inputs #####
+        
+        
 
         self.input_gen = keras.layers.Input(
             shape=(len(self.featureDict["gen"]["branches"]),),
@@ -72,29 +90,6 @@ class NominalNetwork():
             name="input_da_electron"
         )
         
-        
-        
-        
-        '''
-        self.input_npf_p4 = keras.layers.Input(
-            shape=(self.featureDict["npf_p4"]["max"], len(self.featureDict["npf_p4"]["branches"])),
-            name="input_npf_p4"
-        )
-        self.input_cpf_p4 = keras.layers.Input(
-            shape=(self.featureDict["cpf_p4"]["max"], len(self.featureDict["cpf_p4"]["branches"])),
-            name="input_cpf_p4"
-        )
-        self.input_muon_p4 = keras.layers.Input(
-            shape=(self.featureDict["muon_p4"]["max"], len(self.featureDict["muon_p4"]["branches"])),
-            name="input_muon_p4"
-        )
-        self.input_electron_p4 = keras.layers.Input(
-            shape=(self.featureDict["electron_p4"]["max"], len(self.featureDict["electron_p4"]["branches"])),
-            name="input_electron_p4"
-        )
-        '''
-        
-
 
         #### CPF ####
         self.cpf_preproc = \
@@ -113,7 +108,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name='cpf_conv'+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='cpf_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
@@ -138,7 +133,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="npf_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='npf_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
@@ -163,15 +158,14 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="sv_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='sv_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="sv_activation"+str(i+1)),
                 keras.layers.Dropout(0.1,name="sv_dropout"+str(i+1)),
             ])
         self.sv_conv.append(keras.layers.Flatten(name="sv_flatten"))
-
-
+        
         #### Muons ####
         self.muon_preproc = \
             keras.layers.Lambda(self.preprocessingFct(
@@ -188,7 +182,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="muon_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='muon_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="muon_activation"+str(i+1)),
@@ -213,7 +207,7 @@ class NominalNetwork():
                     use_bias=True,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="electron_conv"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='electron_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="electron_activation"+str(i+1)),
@@ -230,40 +224,52 @@ class NominalNetwork():
 
 
         #### Features ####
-        self.full_features = [keras.layers.Concatenate()]
-        for i,nodes in enumerate([200]):
-            self.full_features.extend([
-                keras.layers.Dense(
-                    200,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="features_dense"+str(i)
-                ),
-                keras.layers.Activation('relu',name='features_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
-            ])
+        self.full_features = [
+            keras.layers.Concatenate(),
 
+            keras.layers.Dense(
+                200,
+                kernel_initializer='lecun_normal',
+                bias_initializer='zeros',
+                kernel_regularizer=keras.regularizers.l1(1e-8),
+                name="features_dense1"
+            ),
+            keras.layers.Activation('relu',name='features_activation1') if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="features_activation1"),
+
+            keras.layers.Dense(
+                200,
+                kernel_initializer='lecun_normal',
+                bias_initializer='zeros',
+                kernel_regularizer=keras.regularizers.l1(1e-8),
+                name="features_dense2"
+            ),
+            keras.layers.Activation('relu',name='features_activation2') if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="features_activation2"),
+        ]
+        
 
         #### Class prediction ####
-        self.class_prediction = []
+        self.class_prediction = []#ResLayer('class_res1',100,3),ResLayer('class_res2',100,3)]
+        
         for i,nodes in enumerate([100,100,100]):
             self.class_prediction.extend([
                 keras.layers.Dense(
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="class_dense"+str(i+1)
                 ),
                 keras.layers.Activation('relu',name='class_activation'+str(i+1)) if self.lrp else keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
                 keras.layers.Dropout(0.1,name="class_dropout"+str(i+1)),
             ])
+        
+        
         self.class_prediction.extend([
             keras.layers.Dense(
                 self.nclasses,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l1(1e-6),
+                kernel_regularizer=keras.regularizers.l1(1e-8),
                 name="class_nclasses"
             )
         ])
@@ -286,7 +292,9 @@ class NominalNetwork():
                     nodes,
                     kernel_initializer='lecun_normal',
                     bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
+                    kernel_constraint = ClipConstraint(0.01) if self.wasserstein else None,
+                    bias_constraint = ClipConstraint(0.01) if self.wasserstein else None,
+                    kernel_regularizer=keras.regularizers.l1(1e-8),
                     name="domain_dense"+str(i+1)
                 ),
                 keras.layers.LeakyReLU(alpha=0.1,name="domain_activation"+str(i+1)),
@@ -297,9 +305,11 @@ class NominalNetwork():
                 1,
                 kernel_initializer='lecun_normal',
                 bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l1(1e-6),
-                activation = 'sigmoid',
-                name="domain_final"
+                kernel_constraint = ClipConstraint(0.01) if self.wasserstein else None,
+                bias_constraint = ClipConstraint(0.01) if self.wasserstein else None,
+                kernel_regularizer=keras.regularizers.l1(1e-8),
+                activation = ('sigmoid' if not self.wasserstein else None),
+                name="domain_final" 
             )
         ])
         
@@ -379,13 +389,8 @@ class NominalNetwork():
         class_prediction = self.applyLayers(full_features,self.class_prediction)
         return class_prediction
         
-    def predictDomain(self,globalvars,cpf,npf,sv,muon,electron,gen,freezeFeatures=False):
+    def predictDomain(self,globalvars,cpf,npf,sv,muon,electron,gen):
         full_features = self.extractFeatures(globalvars,cpf,npf,sv,muon,electron,gen)
-        
-        # stopping gradients prevents updating of weights in previous layers
-        if freezeFeatures:
-            full_features = keras.layers.Lambda(lambda x: tf.stop_gradient(x)+0.*x,name='stop_gradient')(full_features)
-            
         domain_prediction = self.applyLayers(full_features,self.domain_prediction)
         return domain_prediction
 
@@ -415,7 +420,7 @@ class NominalNetwork():
         )
         return model
         
-    def makeDomainModel(self, freezeFeatures = False):        
+    def makeDomainModel(self):        
         predictedDomain = self.predictDomain(
             self.input_da_globalvars,
             self.input_da_cpf,
@@ -424,7 +429,6 @@ class NominalNetwork():
             self.input_da_muon,
             self.input_da_electron,
             self.input_gen,
-            freezeFeatures = freezeFeatures
         )
         
         model = keras.models.Model(

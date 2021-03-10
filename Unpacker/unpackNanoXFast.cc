@@ -411,6 +411,26 @@ static const std::vector<Feature> svFeatures{
     Feature("sv_vz")
 };
 
+static const std::vector<Feature> svAdaptedFeatures{
+    Feature("svAdapted_ptrel"),
+    Feature("svAdapted_deta"),
+    Feature("svAdapted_dphi"),
+    Feature("svAdapted_deltaR"),
+    Feature("svAdapted_mass"),
+    Feature("svAdapted_ntracks",Feature::Int),
+    Feature("svAdapted_chi2"),
+    Feature("svAdapted_ndof",Feature::Int),
+    Feature("svAdapted_dxy"),
+    Feature("svAdapted_dxysig"),
+    Feature("svAdapted_d3d"),
+    Feature("svAdapted_d3dsig"),
+    Feature("svAdapted_costhetasvpv"),
+    Feature("svAdapted_enratio"),
+    Feature("svAdapted_vx"),
+    Feature("svAdapted_vy"),
+    Feature("svAdapted_vz")
+};
+
 static const std::vector<Feature> muonFeatures{
     Feature("muon_isGlobal",Feature::Int),
     Feature("muon_isTight",Feature::Int),
@@ -669,6 +689,7 @@ class UnpackedTree
         static constexpr int maxEntries_cpf = 25;
         static constexpr int maxEntries_npf = 25;
         static constexpr int maxEntries_sv = 4;
+        static constexpr int maxEntries_svAdapted = 4;
         static constexpr int maxEntries_muon = 2;
         static constexpr int maxEntries_electron = 2;
 
@@ -692,6 +713,9 @@ class UnpackedTree
 
         unsigned int nsv;
         std::vector<std::shared_ptr<BranchData>> svBranches;
+        
+        unsigned int nsvAdapted;
+        std::vector<std::shared_ptr<BranchData>> svAdaptedBranches;
 
         unsigned int nmuon;
         std::vector<std::shared_ptr<BranchData>> muonBranches;
@@ -756,6 +780,9 @@ class UnpackedTree
 
             tree_->Branch("nsv",&nsv,"nsv/I",bufferSize);
             svBranches = makeBranches<maxEntries_sv>(tree_,svFeatures,"nsv");
+            
+            tree_->Branch("nsvAdapted",&nsvAdapted,"nsvAdapted/I",bufferSize);
+            svAdaptedBranches = makeBranches<maxEntries_svAdapted>(tree_,svAdaptedFeatures,"nsvAdapted");
 
     	    tree_->Branch("nmuon",&nmuon,"nmuon/I",bufferSize);
             muonBranches = makeBranches<maxEntries_muon>(tree_,muonFeatures,"nmuon");
@@ -807,6 +834,7 @@ class NanoXTree
         static constexpr int maxEntries_cpf = UnpackedTree::maxEntries_cpf*maxJets;
         static constexpr int maxEntries_npf = UnpackedTree::maxEntries_npf*maxJets;
         static constexpr int maxEntries_sv = UnpackedTree::maxEntries_sv*maxJets;
+        static constexpr int maxEntries_svAdapted = UnpackedTree::maxEntries_svAdapted*maxJets;
         static constexpr int maxEntries_muon = UnpackedTree::maxEntries_muon*maxJets;
         static constexpr int maxEntries_electron = UnpackedTree::maxEntries_electron*maxJets;
 
@@ -844,6 +872,7 @@ class NanoXTree
         int length_cpf[maxEntries_global];
         int length_npf[maxEntries_global];
         int length_sv[maxEntries_global];
+        int length_svAdapted[maxEntries_global];
         int length_muon[maxEntries_global];
         int length_electron[maxEntries_global];
 
@@ -879,6 +908,10 @@ class NanoXTree
         unsigned int nsv;
         int sv_jetIdx[maxEntries_sv];
         std::vector<std::shared_ptr<BranchData>> svBranches;
+        
+        unsigned int nsvAdapted;
+        int svAdapted_jetIdx[maxEntries_svAdapted];
+        std::vector<std::shared_ptr<BranchData>> svAdaptedBranches;
 
         unsigned int nmuon;
         int muon_jetIdx[maxEntries_muon];
@@ -1000,6 +1033,7 @@ class NanoXTree
             tree_->SetBranchAddress("length_cpf",&length_cpf);
             tree_->SetBranchAddress("length_npf",&length_npf);
             tree_->SetBranchAddress("length_sv",&length_sv);
+            tree_->SetBranchAddress("length_svAdapted",&length_svAdapted);
             tree_->SetBranchAddress("length_mu",&length_muon);
             tree_->SetBranchAddress("length_ele",&length_electron);
 
@@ -1027,6 +1061,10 @@ class NanoXTree
             tree_->SetBranchAddress("nsv",&nsv);
             tree_->SetBranchAddress("sv_jetIdx",&sv_jetIdx);
             svBranches = branchAddresses<maxEntries_sv>(tree_,svFeatures);
+            
+            tree_->SetBranchAddress("nsvAdapted",&nsvAdapted);
+            tree_->SetBranchAddress("svAdapted_jetIdx",&svAdapted_jetIdx);
+            svAdaptedBranches = branchAddresses<maxEntries_svAdapted>(tree_,svAdaptedFeatures);
 
 		    tree_->SetBranchAddress("nmuon",&nmuon);
 		    tree_->SetBranchAddress("muon_jetIdx",&muon_jetIdx);
@@ -1174,6 +1212,11 @@ class NanoXTree
             {
                 std::cout<<svFeatures[ifeature].name()<<": "<<std::to_string(svBranches[ifeature]->mean())<<" +- "<<std::to_string(svBranches[ifeature]->std())<<" ["<<std::to_string(svBranches[ifeature]->min())<<", "<<std::to_string(svBranches[ifeature]->max())<<"]"<<std::endl;
             }
+            
+            for (size_t ifeature = 0; ifeature < svAdaptedBranches.size(); ++ifeature)
+            {
+                std::cout<<svAdaptedFeatures[ifeature].name()<<": "<<std::to_string(svAdaptedBranches[ifeature]->mean())<<" +- "<<std::to_string(svAdaptedBranches[ifeature]->std())<<" ["<<std::to_string(svAdaptedBranches[ifeature]->min())<<", "<<std::to_string(svAdaptedBranches[ifeature]->max())<<"]"<<std::endl;
+            }
 
             for (size_t ifeature = 0; ifeature < muonBranches.size(); ++ifeature)
             {
@@ -1257,7 +1300,7 @@ class NanoXTree
             
 
             if (Jet_nConstituents[jet]<2) return false;
-
+            
             if (addTruth_ and (jetLabelBranchMap["jetorigin_isPrompt_E"]->getFloat(indexOrigin)<0.5 
                 and jetLabelBranchMap["jetorigin_isPrompt_MU"]->getFloat(indexOrigin)<0.5 
                 and jetLabelBranchMap["jetorigin_isPrompt_TAU"]->getFloat(indexOrigin)<0.5))
@@ -1597,6 +1640,32 @@ class NanoXTree
                     unpackedTree.svBranches[ifeature]->setFloat(i,svBranches[ifeature]->getFloat(sv_offset+i));
                 }
             }
+            
+            
+            
+            
+            int svAdapted_offset = 0;
+            for (size_t i = 0; i < indexGlobal; ++i)
+            {
+                svAdapted_offset += length_svAdapted[i];
+            }
+            if (length_svAdapted[indexGlobal]>0 and jet!=svAdapted_jetIdx[svAdapted_offset])
+            {
+                throw std::runtime_error("svAdapted jet index different than global one");
+            }
+
+            int nsvAdapted = std::min<int>(UnpackedTree::maxEntries_svAdapted,length_svAdapted[indexGlobal]);
+            unpackedTree.nsvAdapted = nsvAdapted;
+
+            if (unpackedTree.svAdaptedBranches.size()!=svAdaptedBranches.size()) throw std::runtime_error("svAdapted branches have different size! "+std::to_string(unpackedTree.svAdaptedBranches.size())+"!="+std::to_string(svAdaptedBranches.size()));
+
+            for (size_t ifeature = 0; ifeature < svAdaptedBranches.size(); ++ifeature)
+            {
+                for (int i = 0; i < nsvAdapted; ++i)
+                {
+                    unpackedTree.svAdaptedBranches[ifeature]->setFloat(i,svAdaptedBranches[ifeature]->getFloat(svAdapted_offset+i));
+                }
+            }
 
 
             int muon_offset = 0;
@@ -1736,7 +1805,9 @@ int main(int argc, char **argv)
   	parser.set_optional<int>("f", "testfraction", 15, "Fraction of events for testing in percent [0-100]");
   	parser.set_optional<int>("s", "split", 1, "Number of splits for batched processing");
   	parser.set_optional<int>("b", "batch", 0, "Current batch number (<number of splits)");
+  	parser.set_optional<int>("p", "partition", 1, "Number of input file partitions for batched processing (total number of split is partition x splits)");
   	parser.set_optional<bool>("t", "truth", true, "Add truth from jetorigin (deactivate for DA)");
+  	
     parser.set_required<std::vector<std::string>>("i", "input", "Input files");
     parser.run_and_exit_if_error();
     
@@ -1771,14 +1842,24 @@ int main(int argc, char **argv)
         std::cout<<"Error: Total split number needs to be >=1!"<<std::endl;
         return 1;
     }
-
-    int iSplit = parser.get<int>("b");
-    std::cout<<"current split: "<<iSplit<<"/"<<nSplit<<std::endl;
-    if (iSplit>=nSplit)
+    
+    int nPartition = parser.get<int>("p");
+    std::cout<<"total partitions: "<<nPartition<<std::endl;
+    if (nPartition<=0)
     {
-        std::cout<<"Error: Current split number (-b) needs to be smaller than total split (-s) number!"<<std::endl;
+        std::cout<<"Error: Total partition number needs to be >=1!"<<std::endl;
         return 1;
     }
+
+    int iSplit = parser.get<int>("b");
+    std::cout<<"current partition: "<<(iSplit/nSplit)<<std::endl;
+    std::cout<<"current split: "<<iSplit<<"/"<<nSplit<<std::endl;
+    if (iSplit>=(nSplit*nPartition))
+    {
+        std::cout<<"Error: Current split number (-b) needs to be smaller than total split (-s) x (-p) partition number!"<<std::endl;
+        return 1;
+    }
+    
 
     bool addTruth = parser.get<bool>("t");
     std::cout<<"add truth from jetorigin: "<<(addTruth ? "true" : "false")<<std::endl;
@@ -1848,6 +1929,7 @@ int main(int argc, char **argv)
             selectors.push_back(select);
             setters.push_back(setter);
             caps.push_back(cap);
+            
             inputFileNames.push_back(files);
         }
         else
@@ -1856,10 +1938,26 @@ int main(int argc, char **argv)
             return 1;
         }
     }
+    
+    
+    for (size_t i = 0; i < inputFileNames.size(); ++i)
+    {
+        if ((inputFileNames[i].size()/nPartition)==0)
+        {
+            std::cout<<"Number of partitions ("<<nPartition<<") is too high; not enough inputs files ("<<(inputFileNames[i].size())<<") for input "<<inputs[i]<<" to apply splitting"<<std::endl;
+            return 1;
+        }
+    }
 
     for (size_t i = 0; i < inputFileNames.size(); ++i)
     {
-        auto inputFileNameList = inputFileNames[i];
+        int ipartition = iSplit/nSplit;
+
+        int partitionStart = int(1.*inputFileNames[i].size()*ipartition/nPartition);
+        int partitionEnd = int(1.*inputFileNames[i].size()*(ipartition+1)/nPartition);
+        std::cout<<"Files in partition:  "<<(partitionEnd-partitionStart)<<"/"<<inputFileNames[i].size()<<" ["<<partitionStart<<"; "<<partitionEnd<<"]"<<std::endl;
+        
+        auto inputFileNameList = std::vector<std::string>(inputFileNames[i].begin()+partitionStart,inputFileNames[i].begin()+partitionEnd);
         TChain* chain = new TChain("Events","Events");
         //int nfiles = 0;
         int totalEntries = 0;
@@ -1961,7 +2059,7 @@ int main(int argc, char **argv)
     //offset reading for each input tree
     for (size_t itree = 0; itree < trees.size(); ++itree)
     {
-        trees[itree]->getEvent(int(1.*iSplit*trees[itree]->entries()/nSplit),true);
+        trees[itree]->getEvent(int(1.*(iSplit%nSplit)*trees[itree]->entries()/nSplit),true);
     }
 
     std::vector<int> readEvents(entries.size(),0);
