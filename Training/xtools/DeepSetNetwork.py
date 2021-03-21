@@ -7,155 +7,41 @@ import logging
 import xtools
 
 class DeepSetNetwork(xtools.NominalNetwork):
-    def __init__(self,featureDict):
-        xtools.NominalNetwork.__init__(self,featureDict)
+    def __init__(self,featureDict,wasserstein=False):
+        xtools.NominalNetwork.__init__(self,featureDict,wasserstein)
 
-        self.cpf_conv = []
-        for i,filters in enumerate([64,32,32,16]):
-            self.cpf_conv.extend([
-                keras.layers.Conv1D(
-                    filters,1,
-                    strides=1,
-                    padding='same',
-                    use_bias=True,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name='cpf_conv'+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name='cpf_activation'+str(i+1)),
-                keras.layers.Dropout(0.1,name='cpf_dropout'+str(i+1)),
-            ])
-        self.cpf_conv.append(keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1),name='cpf_sum'))
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen):
+        globalvars = self.global_preproc(globalvars)
+        cpf = self.cpf_preproc(cpf)
+        npf = self.npf_preproc(npf)
+        sv = self.sv_preproc(sv)
+        muon = self.muon_preproc(muon)
+        electron = self.electron_preproc(electron)
+        
+        #global_features = keras.layers.Concatenate(axis=1)([globalvars,gen])
+        
+        cpf = self.addToConvFeatures(cpf,gen)
+        npf = self.addToConvFeatures(npf,gen)
+        sv = self.addToConvFeatures(sv,gen)
+        muon = self.addToConvFeatures(muon,gen)
+        electron = self.addToConvFeatures(electron,gen)
 
+        cpf_conv = self.applyLayers(cpf,self.cpf_conv[:-1])
+        npf_conv = self.applyLayers(npf,self.npf_conv[:-1])
+        sv_conv = self.applyLayers(sv,self.sv_conv[:-1])
+        muon_conv = self.applyLayers(muon,self.muon_conv[:-1])
+        electron_conv = self.applyLayers(electron,self.electron_conv[:-1])
+        
+        avgSum = keras.layers.Lambda(lambda x: tf.reduce_mean(x,axis=1))
+        
+        cpf_conv = avgSum(cpf_conv)
+        npf_conv = avgSum(npf_conv)
+        sv_conv = avgSum(sv_conv)
+        muon_conv = avgSum(muon_conv)
+        electron_conv = avgSum(electron_conv)
+        
 
-        #### NPF ####
-        self.npf_conv = []
-        for i,filters in enumerate([32,16,16,8]):
-            self.npf_conv.extend([keras.layers.Conv1D(
-                    filters,1,
-                    strides=1,
-                    padding='same',
-                    use_bias=True,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="npf_conv"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="npf_activation"+str(i+1)),
-                keras.layers.Dropout(0.1,name="npf_droupout"+str(i+1)),
-            ])
-        self.npf_conv.append(keras.layers.Lambda(lambda x: tf.reduce_sum(x,axis=1),name="npf_sum"))
-
-
-        #### SV ####
-        self.sv_conv = []
-        for i,filters in enumerate([32,16,16,8]):
-            self.sv_conv.extend([keras.layers.Conv1D(
-                    filters,1,
-                    strides=1,
-                    padding='same',
-                    use_bias=True,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="sv_conv"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="sv_activation"+str(i+1)),
-                keras.layers.Dropout(0.1,name="sv_dropout"+str(i+1)),
-            ])
-        self.sv_conv.append(keras.layers.Flatten())
-
-
-        #### Muons ####
-        self.muon_conv = []
-        for i,filters in enumerate([32,16,16,12]):
-            self.muon_conv.extend([keras.layers.Conv1D(
-                    filters,1,
-                    strides=1,
-                    padding='same',
-                    use_bias=True,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="muon_conv"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="muon_activation"+str(i+1)),
-                keras.layers.Dropout(0.1,name="muon_dropout"+str(i+1)),
-            ])
-        self.muon_conv.append(keras.layers.Flatten())
-
-        #### Electron ####
-        self.electron_conv = []
-        for i,filters in enumerate([32,16,16,12]):
-            self.electron_conv.extend([keras.layers.Conv1D(
-                    filters,1,
-                    strides=1,
-                    padding='same',
-                    use_bias=True,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="electron_conv"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="electron_activation"+str(i+1)),
-                keras.layers.Dropout(0.1,name="electron_dropout"+str(i+1)),
-            ])
-        self.electron_conv.append(keras.layers.Flatten())
-
-        #### Features ####
-        self.full_features = [keras.layers.Concatenate()]
-        for i,nodes in enumerate([200]):
-            self.full_features.extend([
-                keras.layers.Dense(
-                    nodes,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="features_dense"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="features_activation"+str(i+1))
-            ])
-
-
-        #### Class prediction ####
-        self.class_prediction = []
-        for i,nodes in enumerate([100,100]):
-            self.class_prediction.extend([
-                keras.layers.Dense(
-                    nodes,
-                    kernel_initializer='lecun_normal',
-                    bias_initializer='zeros',
-                    kernel_regularizer=keras.regularizers.l1(1e-6),
-                    name="class_dense"+str(i+1)
-                ),
-                keras.layers.LeakyReLU(alpha=0.1,name="class_activation"+str(i+1)),
-                keras.layers.Dropout(0.1,name="class_dropout"+str(i+1)),
-            ])
-        self.class_prediction.extend([
-            keras.layers.Dense(
-                self.nclasses,
-                kernel_initializer='lecun_normal',
-                bias_initializer='zeros',
-                kernel_regularizer=keras.regularizers.l1(1e-6),
-                name="class_nclasses"
-            ),
-            keras.layers.Softmax(name="class_softmax")
-        ])
-
-    def returnsLogits(self):
-        return False
-
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
-        globalvars_preproc = self.global_preproc(globalvars)
-
-        cpf_conv = self.applyLayers(self.cpf_preproc(cpf),self.cpf_conv)
-        npf_conv = self.applyLayers(self.npf_preproc(npf),self.npf_conv)
-        sv_conv = self.applyLayers(self.sv_preproc(sv),self.sv_conv)
-        muon_conv = self.applyLayers(self.muon_preproc(muon),self.muon_conv)
-        electron_conv = self.applyLayers(self.electron_preproc(electron),self.electron_conv)
-
-        full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,muon_conv,electron_conv,gen], self.full_features)
+        full_features = self.applyLayers([globalvars,cpf_conv,npf_conv,sv_conv,muon_conv,electron_conv,gen], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,muon_conv,gen], self.full_features)
         #full_features = self.applyLayers([globalvars_preproc,cpf_conv,npf_conv,sv_conv,gen], self.full_features)
 

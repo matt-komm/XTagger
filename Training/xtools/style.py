@@ -127,7 +127,7 @@ def makeColorTable(reverse=False):
 
 rootObj = []
 
-def makeCanvas(name="cv",width=800,height=670):
+def makeCanvas(name="cv",width=800,height=650):
     ROOT.gStyle.SetPaperSize(width*0.0135,height*0.0135)
     cv = ROOT.TCanvas(name,"",width,height)
     rootObj.append(cv)

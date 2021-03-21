@@ -513,7 +513,8 @@ for epoch in range(args.resume, args.nepochs):
         #featurePlotter.plot(outputFolder)
         distributions.plot(os.path.join(outputFolder,"resampled.pdf"))
     modelClass.save_weights(os.path.join(outputFolder,'weight_%i.hdf5'%epoch))
-    modelDomain.save_weights(os.path.join(outputFolder,'weight_da_%i.hdf5'%(epoch)))
+    if useDA:
+        modelDomain.save_weights(os.path.join(outputFolder,'weight_da_%i.hdf5'%(epoch)))
 
     if epoch%5==0:
         testMonitor = xtools.PerformanceMonitor(featureDict)

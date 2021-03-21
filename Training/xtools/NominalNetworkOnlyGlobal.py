@@ -7,14 +7,10 @@ import logging
 import xtools
 
 class NominalNetworkOnlyGlobal(xtools.NominalNetwork):
-    def __init__(self,featureDict):
-        xtools.NominalNetwork.__init__(self,featureDict)
+    def __init__(self,featureDict,wasserstein=False):
+        xtools.NominalNetwork.__init__(self,featureDict,wasserstein)
 
-
-    def returnsLogits(self):
-        return False
-
-    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen,cpf_p4,npf_p4,muon_p4,electron_p4):
+    def extractFeatures(self,globalvars,cpf,npf,sv,muon,electron,gen):
         globalvars_preproc = self.global_preproc(globalvars)
 
 
